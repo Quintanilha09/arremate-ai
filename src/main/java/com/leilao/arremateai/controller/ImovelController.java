@@ -3,6 +3,7 @@ package com.leilao.arremateai.controller;
 import com.leilao.arremateai.dto.ImovelRequest;
 import com.leilao.arremateai.dto.ImovelResponse;
 import com.leilao.arremateai.service.ImovelService;
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -32,6 +33,7 @@ public class ImovelController {
             @RequestParam(required = false) String instituicao,
             @RequestParam(required = false) BigDecimal valorMin,
             @RequestParam(required = false) BigDecimal valorMax,
+            @RequestParam(required = false) String busca,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "dataLeilao") String sortBy,
@@ -39,7 +41,8 @@ public class ImovelController {
     ) {
         boolean hasFilters = uf != null || cidade != null || tipoImovel != null || 
                            instituicao != null || valorMin != null || valorMax != null || 
-                           page > 0 || size != 20 || !"dataLeilao".equals(sortBy) || !"ASC".equals(direction);
+                           busca != null || page > 0 || size != 20 || 
+                           !"dataLeilao".equals(sortBy) || !"ASC".equals(direction);
 
         if (!hasFilters) {
             List<ImovelResponse> imoveis = imovelService.buscarTodosImoveis();
@@ -50,14 +53,20 @@ public class ImovelController {
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
         
         Page<ImovelResponse> resultado = imovelService.buscarComFiltros(
-            uf, cidade, tipoImovel, instituicao, valorMin, valorMax, pageable
+            uf, cidade, tipoImovel, instituicao, valorMin, valorMax, busca, pageable
         );
         
         return ResponseEntity.ok(resultado);
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<ImovelResponse> buscarPorId(@PathVariable Long id) {
+        ImovelResponse imovel = imovelService.buscarPorId(id);
+        return ResponseEntity.ok(imovel);
+    }
+
     @PostMapping
-    public ResponseEntity<ImovelResponse> cadastrarImovel(@RequestBody ImovelRequest request) {
+    public ResponseEntity<ImovelResponse> cadastrarImovel(@Valid @RequestBody ImovelRequest request) {
         ImovelResponse imovel = imovelService.cadastrarImovel(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(imovel);
     }

@@ -1,13 +1,23 @@
 package com.leilao.arremateai.client.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.math.BigDecimal;
 
-public record LeilaoExternoDTO(
-    String numeroLeilao,
-    String descricao,
-    BigDecimal valorAvaliacao,
-    String dataLeilao,
-    String uf,
-    String instituicao,
-    String linkEdital
-) {}
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class LeilaoExternoDTO {
+    
+    private String numeroLeilao;
+    private String descricao;
+    private BigDecimal valorAvaliacao;
+    private String dataLeilao;
+    private String uf;
+    private String instituicao;
+    private String linkEdital;
+}

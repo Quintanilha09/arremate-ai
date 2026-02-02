@@ -4,10 +4,12 @@ import com.leilao.arremateai.domain.Produto;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Data
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProdutoResponse {
@@ -29,6 +31,7 @@ public class ProdutoResponse {
     private LeiloeiraSimples leiloeira;
 
     @Data
+    @Builder
     @NoArgsConstructor
     @AllArgsConstructor
     public static class LeiloeiraSimples {

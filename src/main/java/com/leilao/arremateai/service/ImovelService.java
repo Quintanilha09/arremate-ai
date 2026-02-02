@@ -4,7 +4,9 @@ import com.leilao.arremateai.client.LeilaoPublicoClient;
 import com.leilao.arremateai.domain.Imovel;
 import com.leilao.arremateai.dto.ImovelRequest;
 import com.leilao.arremateai.dto.ImovelResponse;
+import com.leilao.arremateai.mapper.ImovelMapper;
 import com.leilao.arremateai.repository.ImovelRepository;
+import com.leilao.arremateai.specification.ImovelSpecifications;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
@@ -14,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -23,10 +24,16 @@ public class ImovelService {
     private static final Logger log = LoggerFactory.getLogger(ImovelService.class);
     private final LeilaoPublicoClient leilaoClient;
     private final ImovelRepository imovelRepository;
+    private final ImovelMapper imovelMapper;
 
-    public ImovelService(LeilaoPublicoClient leilaoClient, ImovelRepository imovelRepository) {
+    public ImovelService(
+        LeilaoPublicoClient leilaoClient,
+        ImovelRepository imovelRepository,
+        ImovelMapper imovelMapper
+    ) {
         this.leilaoClient = leilaoClient;
         this.imovelRepository = imovelRepository;
+        this.imovelMapper = imovelMapper;
     }
 
     public Page<ImovelResponse> buscarComFiltros(
@@ -36,105 +43,74 @@ public class ImovelService {
             String instituicao,
             BigDecimal valorMin,
             BigDecimal valorMax,
+            String busca,
             Pageable pageable
     ) {
-        log.info("Buscando imóveis com filtros: uf={}, cidade={}, tipo={}, instituicao={}, valorMin={}, valorMax={}",
-                uf, cidade, tipoImovel, instituicao, valorMin, valorMax);
+        log.info("Buscando imóveis com filtros aplicados");
 
-        Specification<Imovel> spec = Specification.where(null);
+        Specification<Imovel> specification = ImovelSpecifications.builder()
+            .comUf(uf)
+            .comCidade(cidade)
+            .comTipoImovel(tipoImovel)
+            .comInstituicao(instituicao)
+            .comValorMinimo(valorMin)
+            .comValorMaximo(valorMax)
+            .comBuscaTexto(busca)
+            .construir();
 
-        if (uf != null && !uf.isBlank()) {
-            spec = spec.and((root, query, cb) -> cb.equal(cb.upper(root.get("uf")), uf.toUpperCase()));
-        }
-
-        if (cidade != null && !cidade.isBlank()) {
-            spec = spec.and((root, query, cb) -> cb.like(cb.upper(root.get("cidade")), "%" + cidade.toUpperCase() + "%"));
-        }
-
-        if (tipoImovel != null && !tipoImovel.isBlank()) {
-            spec = spec.and((root, query, cb) -> cb.like(cb.upper(root.get("tipoImovel")), "%" + tipoImovel.toUpperCase() + "%"));
-        }
-
-        if (instituicao != null && !instituicao.isBlank()) {
-            spec = spec.and((root, query, cb) -> cb.like(cb.upper(root.get("instituicao")), "%" + instituicao.toUpperCase() + "%"));
-        }
-
-        if (valorMin != null) {
-            spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("valorAvaliacao"), valorMin));
-        }
-
-        if (valorMax != null) {
-            spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("valorAvaliacao"), valorMax));
-        }
-
-        Page<Imovel> imoveis = imovelRepository.findAll(spec, pageable);
-        return imoveis.map(this::converterParaResponse);
+        return imovelRepository.findAll(specification, pageable)
+            .map(imovelMapper::paraResponse);
     }
 
     public List<ImovelResponse> buscarTodosImoveis() {
         log.info("Buscando imóveis cadastrados no banco de dados");
-        
+
         var imoveisBanco = imovelRepository.findAll();
-        
-        if (!imoveisBanco.isEmpty()) {
-            log.info("Encontrados {} imóveis no banco de dados", imoveisBanco.size());
-            return imoveisBanco.stream()
-                .map(this::converterParaResponse)
-                .toList();
-        }
-        
-        log.info("Nenhum imóvel no banco. Buscando de fontes externas");
-        var leiloesExternos = leilaoClient.buscarImoveisEmLeilao();
-        
-        return leiloesExternos.stream()
-            .map(leilao -> new ImovelResponse(
-                leilao.numeroLeilao(),
-                leilao.descricao(),
-                leilao.valorAvaliacao(),
-                leilao.dataLeilao(),
-                leilao.uf(),
-                leilao.instituicao(),
-                leilao.linkEdital()
-            ))
+
+        return imoveisBanco.isEmpty()
+            ? buscarImoveisExternos()
+            : converterParaResponses(imoveisBanco);
+    }
+
+    private List<ImovelResponse> converterParaResponses(List<Imovel> imoveis) {
+        log.info("Encontrados {} imóveis no banco de dados", imoveis.size());
+        return imoveis.stream()
+            .map(imovelMapper::paraResponse)
             .toList();
+    }
+
+    private List<ImovelResponse> buscarImoveisExternos() {
+        log.info("Nenhum imóvel no banco. Buscando de fontes externas");
+        return leilaoClient.buscarImoveisEmLeilao().stream()
+            .map(imovelMapper::paraResponse)
+            .toList();
+    }
+
+    public ImovelResponse buscarPorId(Long id) {
+        log.info("Buscando imóvel por ID: {}", id);
+
+        return imovelRepository.findById(id)
+            .map(imovelMapper::paraResponse)
+            .orElseThrow(() -> new IllegalArgumentException("Imóvel não encontrado com ID: " + id));
     }
 
     @Transactional
     public ImovelResponse cadastrarImovel(ImovelRequest request) {
-        log.info("Cadastrando imóvel: {}", request.numeroLeilao());
-        
-        if (imovelRepository.existsByNumeroLeilao(request.numeroLeilao())) {
-            throw new IllegalArgumentException("Imóvel com número de leilão " + request.numeroLeilao() + " já existe");
-        }
-        
-        var imovel = new Imovel();
-        imovel.setNumeroLeilao(request.numeroLeilao());
-        imovel.setDescricao(request.descricao());
-        imovel.setValorAvaliacao(request.valorAvaliacao());
-        imovel.setDataLeilao(LocalDate.parse(request.dataLeilao()));
-        imovel.setUf(request.uf());
-        imovel.setInstituicao(request.instituicao());
-        imovel.setLinkEdital(request.linkEdital());
-        imovel.setCidade(request.cidade());
-        imovel.setBairro(request.bairro());
-        imovel.setAreaTotal(request.areaTotal());
-        imovel.setTipoImovel(request.tipoImovel());
-        
-        var salvo = imovelRepository.save(imovel);
-        log.info("Imóvel cadastrado com ID: {}", salvo.getId());
-        
-        return converterParaResponse(salvo);
+        log.info("Cadastrando imóvel: {}", request.getNumeroLeilao());
+
+        validarImovelNaoDuplicado(request.getNumeroLeilao());
+
+        var imovelSalvo = imovelRepository.save(imovelMapper.paraEntidade(request));
+        log.info("Imóvel cadastrado com ID: {}", imovelSalvo.getId());
+
+        return imovelMapper.paraResponse(imovelSalvo);
     }
 
-    private ImovelResponse converterParaResponse(Imovel imovel) {
-        return new ImovelResponse(
-            imovel.getNumeroLeilao(),
-            imovel.getDescricao(),
-            imovel.getValorAvaliacao(),
-            imovel.getDataLeilao().toString(),
-            imovel.getUf(),
-            imovel.getInstituicao(),
-            imovel.getLinkEdital()
-        );
+    private void validarImovelNaoDuplicado(String numeroLeilao) {
+        if (imovelRepository.existsByNumeroLeilao(numeroLeilao)) {
+            throw new IllegalArgumentException(
+                "Imóvel com número de leilão " + numeroLeilao + " já existe"
+            );
+        }
     }
 }
