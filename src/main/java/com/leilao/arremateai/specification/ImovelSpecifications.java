@@ -69,6 +69,10 @@ public final class ImovelSpecifications {
             .orElse(null);
     }
 
+    public static Specification<Imovel> apenasAtivos() {
+        return (root, query, cb) -> cb.equal(root.get("ativo"), true);
+    }
+
     public static Specification<Imovel> combinar(Specification<Imovel>... specs) {
         return List.of(specs).stream()
             .filter(spec -> spec != null)

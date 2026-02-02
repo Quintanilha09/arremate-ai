@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/imoveis")
@@ -60,7 +61,7 @@ public class ImovelController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ImovelResponse> buscarPorId(@PathVariable Long id) {
+    public ResponseEntity<ImovelResponse> buscarPorId(@PathVariable UUID id) {
         ImovelResponse imovel = imovelService.buscarPorId(id);
         return ResponseEntity.ok(imovel);
     }
@@ -69,5 +70,27 @@ public class ImovelController {
     public ResponseEntity<ImovelResponse> cadastrarImovel(@Valid @RequestBody ImovelRequest request) {
         ImovelResponse imovel = imovelService.cadastrarImovel(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(imovel);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ImovelResponse> atualizarImovel(
+            @PathVariable UUID id,
+            @Valid @RequestBody ImovelRequest request) {
+        ImovelResponse imovel = imovelService.atualizarImovel(id, request);
+        return ResponseEntity.ok(imovel);
+    }
+
+    @PatchMapping("/{id}")
+    public ResponseEntity<ImovelResponse> atualizarParcial(
+            @PathVariable UUID id,
+            @RequestBody ImovelRequest request) {
+        ImovelResponse imovel = imovelService.atualizarParcial(id, request);
+        return ResponseEntity.ok(imovel);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> removerImovel(@PathVariable UUID id) {
+        imovelService.removerImovel(id);
+        return ResponseEntity.noContent().build();
     }
 }

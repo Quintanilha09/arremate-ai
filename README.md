@@ -108,10 +108,97 @@ Resposta:
 {
   "status": "UP",
   "service": "arremateai",
-  "timestamp": "2026-01-30T10:30:00",
+  "timestamp": "2026-02-02T10:30:00",
   "version": "0.0.1-SNAPSHOT"
 }
 ```
+
+---
+
+### 🏠 **Imóveis (CRUD Completo)** ✅ NOVO
+
+#### **Listar Imóveis**
+```
+GET /api/imoveis
+GET /api/imoveis?uf=SP&valorMin=300000&valorMax=800000&page=0&size=20
+```
+
+**Parâmetros:**
+- `uf` (opcional): Filtrar por UF
+- `cidade` (opcional): Filtrar por cidade
+- `tipoImovel` (opcional): Tipo (Casa, Apartamento, etc.)
+- `instituicao` (opcional): Instituição financeira
+- `valorMin` (opcional): Valor mínimo
+- `valorMax` (opcional): Valor máximo
+- `busca` (opcional): Busca por texto na descrição
+- `page` (padrão: 0): Página
+- `size` (padrão: 20): Itens por página
+- `sortBy` (padrão: dataLeilao): Campo de ordenação
+- `direction` (padrão: ASC): ASC ou DESC
+
+#### **Buscar Imóvel por ID**
+```
+GET /api/imoveis/{id}
+```
+
+#### **Criar Novo Imóvel**
+```
+POST /api/imoveis
+Content-Type: application/json
+
+{
+  "numeroLeilao": "LEILAO-001",
+  "descricao": "Apartamento 3 quartos",
+  "valorAvaliacao": 450000,
+  "dataLeilao": "2026-03-15",
+  "uf": "SP",
+  "instituicao": "Caixa Econômica Federal",
+  "linkEdital": "https://exemplo.com",
+  "cidade": "São Paulo",
+  "bairro": "Vila Mariana",
+  "areaTotal": 95.5,
+  "tipoImovel": "Apartamento"
+}
+```
+
+#### **Atualizar Imóvel (Completo)**
+```
+PUT /api/imoveis/{id}
+Content-Type: application/json
+
+{
+  "numeroLeilao": "LEILAO-001",
+  "descricao": "Apartamento atualizado",
+  "valorAvaliacao": 480000,
+  "dataLeilao": "2026-04-10",
+  "uf": "SP",
+  "instituicao": "Banco do Brasil",
+  "linkEdital": "https://exemplo.com/novo",
+  "cidade": "São Paulo",
+  "bairro": "Moema",
+  "areaTotal": 100,
+  "tipoImovel": "Apartamento"
+}
+```
+
+#### **Atualizar Imóvel (Parcial)**
+```
+PATCH /api/imoveis/{id}
+Content-Type: application/json
+
+{
+  "valorAvaliacao": 500000,
+  "cidade": "Campinas"
+}
+```
+
+#### **Remover Imóvel (Soft Delete)**
+```
+DELETE /api/imoveis/{id}
+```
+_Nota: Remove logicamente (marca como inativo), não apaga do banco._
+
+---
 
 ### Listar Produtos
 ```
