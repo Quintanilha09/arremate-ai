@@ -1,6 +1,7 @@
 package com.leilao.arremateai.repository;
 
 import com.leilao.arremateai.domain.Favorito;
+import com.leilao.arremateai.domain.Usuario;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -11,13 +12,13 @@ import java.util.UUID;
 @Repository
 public interface FavoritoRepository extends JpaRepository<Favorito, UUID> {
     
-    List<Favorito> findByUsuarioIdOrderByCreatedAtDesc(String usuarioId);
+    List<Favorito> findByUsuarioOrderByCreatedAtDesc(Usuario usuario);
     
-    Optional<Favorito> findByUsuarioIdAndImovelId(String usuarioId, UUID imovelId);
+    Optional<Favorito> findByUsuarioAndImovelId(Usuario usuario, UUID imovelId);
     
-    boolean existsByUsuarioIdAndImovelId(String usuarioId, UUID imovelId);
+    boolean existsByUsuarioAndImovelId(Usuario usuario, UUID imovelId);
     
-    void deleteByUsuarioIdAndImovelId(String usuarioId, UUID imovelId);
+    void deleteByUsuarioAndImovelId(Usuario usuario, UUID imovelId);
     
-    long countByUsuarioId(String usuarioId);
+    long countByUsuario(Usuario usuario);
 }

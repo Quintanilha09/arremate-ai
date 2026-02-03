@@ -22,8 +22,9 @@ public class Favorito {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "usuario_id", nullable = false, length = 100)
-    private String usuarioId; // Temporário: String até implementar autenticação na Fase 2
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_id", nullable = false)
+    private Usuario usuario;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "imovel_id", nullable = false)

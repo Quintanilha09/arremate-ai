@@ -262,10 +262,10 @@ mvn test
 
 A documentação completa do projeto está em `/src/docs`:
 
-- [Decisões Técnicas](src/docs/DECISOES_TECNICAS.md)
-- [Listagem de APIs Públicas](src/docs/LISTAGEM_APIS_PUBLICAS.md)
-- [Proposta](src/docs/PROPOSTA.md)
-- [Roadmap](src/docs/ROADMAP.md)
+- [Decisões Técnicas](src/docs/negócio/DECISOES_TECNICAS.md)
+- [Listagem de APIs Públicas](src/docs/negócio/LISTAGEM_APIS_PUBLICAS.md)
+- [Proposta](src/docs/negócio/PROPOSTA.md)
+- [Roadmap](src/docs/negócio/ROADMAP.md)
 
 ## 📧 Contato
 

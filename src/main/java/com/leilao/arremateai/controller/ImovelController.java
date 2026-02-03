@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -67,12 +68,14 @@ public class ImovelController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ImovelResponse> cadastrarImovel(@Valid @RequestBody ImovelRequest request) {
         ImovelResponse imovel = imovelService.cadastrarImovel(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(imovel);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ImovelResponse> atualizarImovel(
             @PathVariable UUID id,
             @Valid @RequestBody ImovelRequest request) {
@@ -80,6 +83,7 @@ public class ImovelController {
         return ResponseEntity.ok(imovel);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/{id}")
     public ResponseEntity<ImovelResponse> atualizarParcial(
             @PathVariable UUID id,
@@ -88,6 +92,7 @@ public class ImovelController {
         return ResponseEntity.ok(imovel);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> removerImovel(@PathVariable UUID id) {
         imovelService.removerImovel(id);

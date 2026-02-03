@@ -84,7 +84,17 @@ public class ImovelMapper {
         imovel.setNumeroLeilao(request.getNumeroLeilao());
         imovel.setDescricao(request.getDescricao());
         imovel.setValorAvaliacao(request.getValorAvaliacao());
-        imovel.setDataLeilao(LocalDate.parse(request.getDataLeilao()));
+        
+        // Aceita tanto LocalDate ("2026-03-15") quanto LocalDateTime ("2026-03-15T10:00:00")
+        String dataLeilao = request.getDataLeilao();
+        if (dataLeilao.contains("T")) {
+            // Parse como LocalDateTime e extrai apenas a data
+            imovel.setDataLeilao(java.time.LocalDateTime.parse(dataLeilao).toLocalDate());
+        } else {
+            // Parse direto como LocalDate
+            imovel.setDataLeilao(LocalDate.parse(dataLeilao));
+        }
+        
         imovel.setUf(request.getUf());
         imovel.setInstituicao(request.getInstituicao());
         imovel.setLinkEdital(request.getLinkEdital());

@@ -17,8 +17,8 @@ ALTER TABLE imovel
 
 -- Criar tabela de imagens
 CREATE TABLE IF NOT EXISTS imagem_imovel (
-    id BIGSERIAL PRIMARY KEY,
-    imovel_id BIGINT NOT NULL,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    imovel_id UUID NOT NULL,
     url VARCHAR(1000) NOT NULL,
     legenda VARCHAR(500),
     principal BOOLEAN DEFAULT false,

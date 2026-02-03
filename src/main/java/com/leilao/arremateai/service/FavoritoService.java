@@ -2,6 +2,7 @@ package com.leilao.arremateai.service;
 
 import com.leilao.arremateai.domain.Favorito;
 import com.leilao.arremateai.domain.Imovel;
+import com.leilao.arremateai.domain.Usuario;
 import com.leilao.arremateai.dto.FavoritoResponse;
 import com.leilao.arremateai.mapper.ImovelMapper;
 import com.leilao.arremateai.repository.FavoritoRepository;
@@ -35,8 +36,8 @@ public class FavoritoService {
         this.imovelMapper = imovelMapper;
     }
 
-    public FavoritoResponse adicionarFavorito(String usuarioId, UUID imovelId) {
-        log.info("Adicionando imóvel {} aos favoritos do usuário {}", imovelId, usuarioId);
+    public FavoritoResponse adicionarFavorito(Usuario usuario, UUID imovelId) {
+        log.info("Adicionando imóvel {} aos favoritos do usuário {}", imovelId, usuario.getId());
 
         // Validar se o imóvel existe e está ativo
         Imovel imovel = imovelRepository.findById(imovelId)
@@ -46,13 +47,13 @@ public class FavoritoService {
                 ));
 
         // Validar se já não está nos favoritos
-        if (favoritoRepository.existsByUsuarioIdAndImovelId(usuarioId, imovelId)) {
+        if (favoritoRepository.existsByUsuarioAndImovelId(usuario, imovelId)) {
             throw new IllegalStateException("Imóvel já está nos favoritos");
         }
 
         // Criar favorito
         Favorito favorito = new Favorito();
-        favorito.setUsuarioId(usuarioId);
+        favorito.setUsuario(usuario);
         favorito.setImovel(imovel);
 
         Favorito favoritoSalvo = favoritoRepository.save(favorito);
@@ -61,13 +62,13 @@ public class FavoritoService {
         return converterParaResponse(favoritoSalvo);
     }
 
-    public void removerFavorito(String usuarioId, UUID imovelId) {
-        log.info("Removendo imóvel {} dos favoritos do usuário {}", imovelId, usuarioId);
+    public void removerFavorito(Usuario usuario, UUID imovelId) {
+        log.info("Removendo imóvel {} dos favoritos do usuário {}", imovelId, usuario.getId());
 
         // Validar se o favorito existe
-        Favorito favorito = favoritoRepository.findByUsuarioIdAndImovelId(usuarioId, imovelId)
+        Favorito favorito = favoritoRepository.findByUsuarioAndImovelId(usuario, imovelId)
                 .orElseThrow(() -> new EntityNotFoundException(
-                        "Favorito não encontrado para o usuário " + usuarioId + " e imóvel " + imovelId
+                        "Favorito não encontrado para o usuário " + usuario.getId() + " e imóvel " + imovelId
                 ));
 
         favoritoRepository.delete(favorito);
@@ -75,10 +76,10 @@ public class FavoritoService {
     }
 
     @Transactional(readOnly = true)
-    public List<FavoritoResponse> listarFavoritos(String usuarioId) {
-        log.info("Listando favoritos do usuário {}", usuarioId);
+    public List<FavoritoResponse> listarFavoritos(Usuario usuario) {
+        log.info("Listando favoritos do usuário {}", usuario.getId());
 
-        List<Favorito> favoritos = favoritoRepository.findByUsuarioIdOrderByCreatedAtDesc(usuarioId);
+        List<Favorito> favoritos = favoritoRepository.findByUsuarioOrderByCreatedAtDesc(usuario);
         
         return favoritos.stream()
                 .map(this::converterParaResponse)
@@ -86,19 +87,19 @@ public class FavoritoService {
     }
 
     @Transactional(readOnly = true)
-    public boolean isFavorito(String usuarioId, UUID imovelId) {
-        return favoritoRepository.existsByUsuarioIdAndImovelId(usuarioId, imovelId);
+    public boolean isFavorito(Usuario usuario, UUID imovelId) {
+        return favoritoRepository.existsByUsuarioAndImovelId(usuario, imovelId);
     }
 
     @Transactional(readOnly = true)
-    public long contarFavoritos(String usuarioId) {
-        return favoritoRepository.countByUsuarioId(usuarioId);
+    public long contarFavoritos(Usuario usuario) {
+        return favoritoRepository.countByUsuario(usuario);
     }
 
     private FavoritoResponse converterParaResponse(Favorito favorito) {
         return new FavoritoResponse(
                 favorito.getId(),
-                favorito.getUsuarioId(),
+                favorito.getUsuario().getId().toString(),
                 imovelMapper.paraResponse(favorito.getImovel()),
                 favorito.getCreatedAt()
         );
