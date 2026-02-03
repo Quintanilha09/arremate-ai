@@ -64,9 +64,57 @@ public final class ImovelSpecifications {
     public static Specification<Imovel> comBuscaTexto(String busca) {
         return Optional.ofNullable(busca)
             .filter(valor -> !valor.isBlank())
-            .map(valor -> (Specification<Imovel>) (root, query, cb) ->
-                cb.like(cb.upper(root.get("descricao")), "%" + valor.toUpperCase() + "%"))
+            .map(valor -> (Specification<Imovel>) (root, query, cb) -> {
+                String buscaUpper = "%" + valor.toUpperCase() + "%";
+                return cb.or(
+                    cb.like(cb.upper(root.get("descricao")), buscaUpper),
+                    cb.like(cb.upper(root.get("cidade")), buscaUpper),
+                    cb.like(cb.upper(root.get("bairro")), buscaUpper),
+                    cb.like(cb.upper(root.get("endereco")), buscaUpper),
+                    cb.like(cb.upper(root.get("tipoImovel")), buscaUpper),
+                    cb.like(cb.upper(root.get("instituicao")), buscaUpper)
+                );
+            })
             .orElse(null);
+    }
+
+    public static Specification<Imovel> comQuartosMinimo(Integer quartosMin) {
+        return Optional.ofNullable(quartosMin)
+            .map(valor -> (Specification<Imovel>) (root, query, cb) ->
+                cb.greaterThanOrEqualTo(root.get("quartos"), valor))
+            .orElse(null);
+    }
+
+    public static Specification<Imovel> comBanheirosMinimo(Integer banheirosMin) {
+        return Optional.ofNullable(banheirosMin)
+            .map(valor -> (Specification<Imovel>) (root, query, cb) ->
+                cb.greaterThanOrEqualTo(root.get("banheiros"), valor))
+            .orElse(null);
+    }
+
+    public static Specification<Imovel> comVagasMinimo(Integer vagasMin) {
+        return Optional.ofNullable(vagasMin)
+            .map(valor -> (Specification<Imovel>) (root, query, cb) ->
+                cb.greaterThanOrEqualTo(root.get("vagas"), valor))
+            .orElse(null);
+    }
+
+    public static Specification<Imovel> comAreaMinima(BigDecimal areaMin) {
+        return Optional.ofNullable(areaMin)
+            .map(valor -> (Specification<Imovel>) (root, query, cb) ->
+                cb.greaterThanOrEqualTo(root.get("areaTotal"), valor))
+            .orElse(null);
+    }
+
+    public static Specification<Imovel> comAreaMaxima(BigDecimal areaMax) {
+        return Optional.ofNullable(areaMax)
+            .map(valor -> (Specification<Imovel>) (root, query, cb) ->
+                cb.lessThanOrEqualTo(root.get("areaTotal"), valor))
+            .orElse(null);
+    }
+
+    public static Specification<Imovel> apenasAtivos() {
+        return (root, query, cb) -> cb.equal(root.get("ativo"), true);
     }
 
     public static Specification<Imovel> combinar(Specification<Imovel>... specs) {
@@ -111,6 +159,31 @@ public final class ImovelSpecifications {
 
         public Builder comBuscaTexto(String busca) {
             adicionarSePresente(busca, ImovelSpecifications::comBuscaTexto);
+            return this;
+        }
+
+        public Builder comQuartosMinimo(Integer quartosMin) {
+            adicionarSePresente(quartosMin, ImovelSpecifications::comQuartosMinimo);
+            return this;
+        }
+
+        public Builder comBanheirosMinimo(Integer banheirosMin) {
+            adicionarSePresente(banheirosMin, ImovelSpecifications::comBanheirosMinimo);
+            return this;
+        }
+
+        public Builder comVagasMinimo(Integer vagasMin) {
+            adicionarSePresente(vagasMin, ImovelSpecifications::comVagasMinimo);
+            return this;
+        }
+
+        public Builder comAreaMinima(BigDecimal areaMin) {
+            adicionarSePresente(areaMin, ImovelSpecifications::comAreaMinima);
+            return this;
+        }
+
+        public Builder comAreaMaxima(BigDecimal areaMax) {
+            adicionarSePresente(areaMax, ImovelSpecifications::comAreaMaxima);
             return this;
         }
 

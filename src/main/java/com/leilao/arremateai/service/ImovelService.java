@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class ImovelService {
@@ -44,6 +45,11 @@ public class ImovelService {
             BigDecimal valorMin,
             BigDecimal valorMax,
             String busca,
+            Integer quartosMin,
+            Integer banheirosMin,
+            Integer vagasMin,
+            BigDecimal areaMin,
+            BigDecimal areaMax,
             Pageable pageable
     ) {
         log.info("Buscando imóveis com filtros aplicados");
@@ -56,7 +62,15 @@ public class ImovelService {
             .comValorMinimo(valorMin)
             .comValorMaximo(valorMax)
             .comBuscaTexto(busca)
+            .comQuartosMinimo(quartosMin)
+            .comBanheirosMinimo(banheirosMin)
+            .comVagasMinimo(vagasMin)
+            .comAreaMinima(areaMin)
+            .comAreaMaxima(areaMax)
             .construir();
+
+        // Adiciona filtro para apenas imóveis ativos
+        specification = specification.and(ImovelSpecifications.apenasAtivos());
 
         return imovelRepository.findAll(specification, pageable)
             .map(imovelMapper::paraResponse);
@@ -65,7 +79,9 @@ public class ImovelService {
     public List<ImovelResponse> buscarTodosImoveis() {
         log.info("Buscando imóveis cadastrados no banco de dados");
 
-        var imoveisBanco = imovelRepository.findAll();
+        // Buscar apenas imóveis ativos
+        Specification<Imovel> apenasAtivos = ImovelSpecifications.apenasAtivos();
+        var imoveisBanco = imovelRepository.findAll(apenasAtivos);
 
         return imoveisBanco.isEmpty()
             ? buscarImoveisExternos()
@@ -86,10 +102,11 @@ public class ImovelService {
             .toList();
     }
 
-    public ImovelResponse buscarPorId(Long id) {
+    public ImovelResponse buscarPorId(UUID id) {
         log.info("Buscando imóvel por ID: {}", id);
 
         return imovelRepository.findById(id)
+            .filter(Imovel::getAtivo)
             .map(imovelMapper::paraResponse)
             .orElseThrow(() -> new IllegalArgumentException("Imóvel não encontrado com ID: " + id));
     }
@@ -112,5 +129,155 @@ public class ImovelService {
                 "Imóvel com número de leilão " + numeroLeilao + " já existe"
             );
         }
+    }
+
+    @Transactional
+    public ImovelResponse atualizarImovel(UUID id, ImovelRequest request) {
+        log.info("Atualizando imóvel com ID: {}", id);
+
+        Imovel imovel = imovelRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Imóvel não encontrado com ID: " + id));
+
+        if (!imovel.getAtivo()) {
+            throw new IllegalArgumentException("Imóvel com ID " + id + " está inativo e não pode ser atualizado");
+        }
+
+        // Validar se o número de leilão não está duplicado (exceto para o próprio imóvel)
+        if (!imovel.getNumeroLeilao().equals(request.getNumeroLeilao())) {
+            validarImovelNaoDuplicado(request.getNumeroLeilao());
+        }
+
+        // Atualizar todos os campos
+        imovel.setNumeroLeilao(request.getNumeroLeilao());
+        imovel.setDescricao(request.getDescricao());
+        imovel.setValorAvaliacao(request.getValorAvaliacao());
+        imovel.setDataLeilao(java.time.LocalDate.parse(request.getDataLeilao()));
+        imovel.setUf(request.getUf());
+        imovel.setInstituicao(request.getInstituicao());
+        imovel.setLinkEdital(request.getLinkEdital());
+        imovel.setCidade(request.getCidade());
+        imovel.setBairro(request.getBairro());
+        imovel.setAreaTotal(request.getAreaTotal());
+        imovel.setTipoImovel(request.getTipoImovel());
+        imovel.setQuartos(request.getQuartos());
+        imovel.setBanheiros(request.getBanheiros());
+        imovel.setVagas(request.getVagas());
+        imovel.setEndereco(request.getEndereco());
+        imovel.setCep(request.getCep());
+        imovel.setLatitude(request.getLatitude());
+        imovel.setLongitude(request.getLongitude());
+        imovel.setCondicao(request.getCondicao());
+        imovel.setAceitaFinanciamento(request.getAceitaFinanciamento());
+        imovel.setObservacoes(request.getObservacoes());
+        imovel.setStatus(request.getStatus() != null ? request.getStatus() : "DISPONIVEL");
+
+        Imovel imovelAtualizado = imovelRepository.save(imovel);
+        log.info("Imóvel atualizado com sucesso: ID {}", id);
+
+        return imovelMapper.paraResponse(imovelAtualizado);
+    }
+
+    @Transactional
+    public ImovelResponse atualizarParcial(UUID id, ImovelRequest request) {
+        log.info("Atualizando parcialmente imóvel com ID: {}", id);
+
+        Imovel imovel = imovelRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Imóvel não encontrado com ID: " + id));
+
+        if (!imovel.getAtivo()) {
+            throw new IllegalArgumentException("Imóvel com ID " + id + " está inativo e não pode ser atualizado");
+        }
+
+        // Atualizar apenas campos não-nulos
+        if (request.getNumeroLeilao() != null && !request.getNumeroLeilao().isBlank()) {
+            if (!imovel.getNumeroLeilao().equals(request.getNumeroLeilao())) {
+                validarImovelNaoDuplicado(request.getNumeroLeilao());
+            }
+            imovel.setNumeroLeilao(request.getNumeroLeilao());
+        }
+        if (request.getDescricao() != null && !request.getDescricao().isBlank()) {
+            imovel.setDescricao(request.getDescricao());
+        }
+        if (request.getValorAvaliacao() != null) {
+            imovel.setValorAvaliacao(request.getValorAvaliacao());
+        }
+        if (request.getDataLeilao() != null && !request.getDataLeilao().isBlank()) {
+            imovel.setDataLeilao(java.time.LocalDate.parse(request.getDataLeilao()));
+        }
+        if (request.getUf() != null && !request.getUf().isBlank()) {
+            imovel.setUf(request.getUf());
+        }
+        if (request.getInstituicao() != null && !request.getInstituicao().isBlank()) {
+            imovel.setInstituicao(request.getInstituicao());
+        }
+        if (request.getLinkEdital() != null) {
+            imovel.setLinkEdital(request.getLinkEdital());
+        }
+        if (request.getCidade() != null) {
+            imovel.setCidade(request.getCidade());
+        }
+        if (request.getBairro() != null) {
+            imovel.setBairro(request.getBairro());
+        }
+        if (request.getAreaTotal() != null) {
+            imovel.setAreaTotal(request.getAreaTotal());
+        }
+        if (request.getTipoImovel() != null) {
+            imovel.setTipoImovel(request.getTipoImovel());
+        }
+        if (request.getQuartos() != null) {
+            imovel.setQuartos(request.getQuartos());
+        }
+        if (request.getBanheiros() != null) {
+            imovel.setBanheiros(request.getBanheiros());
+        }
+        if (request.getVagas() != null) {
+            imovel.setVagas(request.getVagas());
+        }
+        if (request.getEndereco() != null) {
+            imovel.setEndereco(request.getEndereco());
+        }
+        if (request.getCep() != null) {
+            imovel.setCep(request.getCep());
+        }
+        if (request.getLatitude() != null) {
+            imovel.setLatitude(request.getLatitude());
+        }
+        if (request.getLongitude() != null) {
+            imovel.setLongitude(request.getLongitude());
+        }
+        if (request.getCondicao() != null) {
+            imovel.setCondicao(request.getCondicao());
+        }
+        if (request.getAceitaFinanciamento() != null) {
+            imovel.setAceitaFinanciamento(request.getAceitaFinanciamento());
+        }
+        if (request.getObservacoes() != null) {
+            imovel.setObservacoes(request.getObservacoes());
+        }
+        if (request.getStatus() != null) {
+            imovel.setStatus(request.getStatus());
+        }
+
+        Imovel imovelAtualizado = imovelRepository.save(imovel);
+        log.info("Imóvel atualizado parcialmente com sucesso: ID {}", id);
+
+        return imovelMapper.paraResponse(imovelAtualizado);
+    }
+
+    @Transactional
+    public void removerImovel(UUID id) {
+        log.info("Removendo imóvel com ID: {} (soft delete)", id);
+
+        Imovel imovel = imovelRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Imóvel não encontrado com ID: " + id));
+
+        if (!imovel.getAtivo()) {
+            throw new IllegalArgumentException("Imóvel com ID " + id + " já está inativo");
+        }
+
+        imovel.setAtivo(false);
+        imovelRepository.save(imovel);
+        log.info("Imóvel removido com sucesso (marcado como inativo): ID {}", id);
     }
 }
