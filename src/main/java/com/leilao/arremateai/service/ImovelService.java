@@ -45,6 +45,11 @@ public class ImovelService {
             BigDecimal valorMin,
             BigDecimal valorMax,
             String busca,
+            Integer quartosMin,
+            Integer banheirosMin,
+            Integer vagasMin,
+            BigDecimal areaMin,
+            BigDecimal areaMax,
             Pageable pageable
     ) {
         log.info("Buscando imóveis com filtros aplicados");
@@ -57,6 +62,11 @@ public class ImovelService {
             .comValorMinimo(valorMin)
             .comValorMaximo(valorMax)
             .comBuscaTexto(busca)
+            .comQuartosMinimo(quartosMin)
+            .comBanheirosMinimo(banheirosMin)
+            .comVagasMinimo(vagasMin)
+            .comAreaMinima(areaMin)
+            .comAreaMaxima(areaMax)
             .construir();
 
         // Adiciona filtro para apenas imóveis ativos

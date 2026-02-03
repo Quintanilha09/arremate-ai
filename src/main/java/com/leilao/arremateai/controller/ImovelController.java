@@ -36,6 +36,11 @@ public class ImovelController {
             @RequestParam(required = false) BigDecimal valorMin,
             @RequestParam(required = false) BigDecimal valorMax,
             @RequestParam(required = false) String busca,
+            @RequestParam(required = false) Integer quartosMin,
+            @RequestParam(required = false) Integer banheirosMin,
+            @RequestParam(required = false) Integer vagasMin,
+            @RequestParam(required = false) BigDecimal areaMin,
+            @RequestParam(required = false) BigDecimal areaMax,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "dataLeilao") String sortBy,
@@ -43,7 +48,9 @@ public class ImovelController {
     ) {
         boolean hasFilters = uf != null || cidade != null || tipoImovel != null || 
                            instituicao != null || valorMin != null || valorMax != null || 
-                           busca != null || page > 0 || size != 20 || 
+                           busca != null || quartosMin != null || banheirosMin != null || 
+                           vagasMin != null || areaMin != null || areaMax != null ||
+                           page > 0 || size != 20 || 
                            !"dataLeilao".equals(sortBy) || !"ASC".equals(direction);
 
         if (!hasFilters) {
@@ -55,7 +62,8 @@ public class ImovelController {
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
         
         Page<ImovelResponse> resultado = imovelService.buscarComFiltros(
-            uf, cidade, tipoImovel, instituicao, valorMin, valorMax, busca, pageable
+            uf, cidade, tipoImovel, instituicao, valorMin, valorMax, busca, 
+            quartosMin, banheirosMin, vagasMin, areaMin, areaMax, pageable
         );
         
         return ResponseEntity.ok(resultado);
