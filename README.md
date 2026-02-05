@@ -7,32 +7,78 @@ Plataforma centralizada que agrega produtos de múltiplas leiloeiras brasileiras
 - **Java 17**
 - **Spring Boot 3.2.2**
 - **PostgreSQL 16**
-- **Redis 7**
+- **Redis 7** (preparado, não implementado)
 - **Maven**
+- **Spring Security + JWT**
+- **OAuth2 (Google)**
+- **JavaMailSender** (2FA por e-mail)
+
+## ✨ Funcionalidades
+
+### Autenticação
+- ✅ Login/Registro com JWT
+- ✅ **Google OAuth2** (Login com conta Google)
+- ✅ **Verificação em 2 Etapas (2FA)** por e-mail
+- ✅ Níveis de acesso (ADMIN, VENDEDOR, COMPRADOR)
+
+### Imóveis
+- ✅ CRUD completo de imóveis
+- ✅ Upload de imagens (até 20 por imóvel)
+- ✅ Filtros avançados (12+ parâmetros)
+- ✅ Busca textual full-text
+- ✅ Paginação e ordenação
+- ✅ Soft delete
+
+### Favoritos
+- ✅ Sistema completo de favoritos
+- ✅ Adicionar/remover imóveis
+- ✅ Listagem por usuário
+
+### Estatísticas
+- ✅ Dashboard com dados agregados
+- ✅ Total de imóveis, valores médios, etc.
 
 ## 📋 Pré-requisitos
 
 - Java 17 instalado
 - Docker e Docker Compose instalados
 - Maven 3.8+ (ou use o wrapper `./mvnw`)
+- Conta Google (para OAuth2) - [Ver guia](CONFIGURACAO_GOOGLE_OAUTH.md)
+- Conta Gmail (para envio de e-mails 2FA) - [Ver guia](CONFIGURACAO_EMAIL.md)
 
 ## ⚙️ Setup Rápido
 
-### 1. Subir banco de dados (PostgreSQL + Redis)
+### 1. Configurar Variáveis de Ambiente
+
+Copie o arquivo de exemplo e preencha com suas credenciais:
 
 ```bash
-docker-compose up -d
+cp .env.example .env
 ```
 
-Verificar se os containers estão rodando:
+**Edite o arquivo `.env` e configure:**
+- `GOOGLE_CLIENT_ID` - [Como obter](CONFIGURACAO_GOOGLE_OAUTH.md)
+- `GOOGLE_CLIENT_SECRET` - [Como obter](CONFIGURACAO_GOOGLE_OAUTH.md)
+- `EMAIL_USERNAME` - Seu e-mail Gmail
+- `E3. Rodar a aplicação
+
+**IMPORTANTE:** As migrations serão executadas automaticamente na primeira execução.
 
 ```bash
-docker-compose ps
+# Windows
+mvnw.cmd spring-boot:run
+
+# Linux/Mac
+./mvnw spring-boot:run
 ```
 
-### 2. Rodar a aplicação
+Ou via Maven instalado:
 
 ```bash
+mvn spring-boot:run
+```
+
+### 4sh
 # Windows
 mvnw.cmd spring-boot:run
 
@@ -66,7 +112,20 @@ curl "http://localhost:8080/api/imoveis?cidade=Curitiba&quartosMin=2&banheirosMi
 # Busca por faixa de preço e área
 curl "http://localhost:8080/api/imoveis?valorMin=300000&valorMax=800000&areaMin=50&areaMax=200"
 
-# Busca textual (procura em múltiplos campos)
+# B
+
+**Testar 2FA:**
+```bash
+# Enviar código de verificação
+curl -X POST http://localhost:8080/api/auth/2fa/enviar-codigo \
+  -H "Content-Type: application/json" \
+  -d '{"email":"seu-email@gmail.com"}'
+
+# Verificar código (substitua 123456 pelo código recebido)
+curl -X POST http://localhost:8080/api/auth/2fa/verificar-codigo \
+  -H "Content-Type: application/json" \
+  -d '{"email":"seu-email@gmail.com","codigo":"123456"}'
+```usca textual (procura em múltiplos campos)
 curl "http://localhost:8080/api/imoveis?busca=Apartamento"
 ```
 

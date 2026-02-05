@@ -46,12 +46,20 @@ public class ImovelController {
             @RequestParam(defaultValue = "dataLeilao") String sortBy,
             @RequestParam(defaultValue = "ASC") String direction
     ) {
+        // Validar campo de ordenação - mapear nomes legados para nomes corretos
+        String validatedSortBy = sortBy;
+        if ("dataCadastro".equals(sortBy)) {
+            validatedSortBy = "createdAt";
+        } else if (!isValidSortField(sortBy)) {
+            validatedSortBy = "dataLeilao"; // fallback to default
+        }
+        
         boolean hasFilters = uf != null || cidade != null || tipoImovel != null || 
                            instituicao != null || valorMin != null || valorMax != null || 
                            busca != null || quartosMin != null || banheirosMin != null || 
                            vagasMin != null || areaMin != null || areaMax != null ||
                            page > 0 || size != 20 || 
-                           !"dataLeilao".equals(sortBy) || !"ASC".equals(direction);
+                           !"dataLeilao".equals(validatedSortBy) || !"ASC".equals(direction);
 
         if (!hasFilters) {
             List<ImovelResponse> imoveis = imovelService.buscarTodosImoveis();
@@ -59,7 +67,7 @@ public class ImovelController {
         }
 
         Sort.Direction sortDirection = "DESC".equalsIgnoreCase(direction) ? Sort.Direction.DESC : Sort.Direction.ASC;
-        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, validatedSortBy));
         
         Page<ImovelResponse> resultado = imovelService.buscarComFiltros(
             uf, cidade, tipoImovel, instituicao, valorMin, valorMax, busca, 
@@ -67,6 +75,18 @@ public class ImovelController {
         );
         
         return ResponseEntity.ok(resultado);
+    }
+    
+    private boolean isValidSortField(String field) {
+        // Lista de campos válidos para ordenação na entidade Imovel
+        return field != null && (
+            field.equals("dataLeilao") ||
+            field.equals("valorAvaliacao") ||
+            field.equals("createdAt") ||
+            field.equals("cidade") ||
+            field.equals("uf") ||
+            field.equals("tipoImovel")
+        );
     }
 
     @GetMapping("/{id}")

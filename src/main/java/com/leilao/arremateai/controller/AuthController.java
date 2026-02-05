@@ -1,12 +1,11 @@
 package com.leilao.arremateai.controller;
 
 import com.leilao.arremateai.domain.Usuario;
-import com.leilao.arremateai.dto.AuthResponse;
-import com.leilao.arremateai.dto.LoginRequest;
-import com.leilao.arremateai.dto.UsuarioRequest;
-import com.leilao.arremateai.dto.UsuarioResponse;
+import com.leilao.arremateai.dto.*;
 import com.leilao.arremateai.security.JwtService;
+import com.leilao.arremateai.service.OAuth2Service;
 import com.leilao.arremateai.service.UsuarioService;
+import com.leilao.arremateai.service.VerificacaoService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +16,9 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.view.RedirectView;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -27,15 +29,21 @@ public class AuthController {
     private final UsuarioService usuarioService;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final VerificacaoService verificacaoService;
+    private final OAuth2Service oauth2Service;
 
     public AuthController(
             UsuarioService usuarioService,
             JwtService jwtService,
-            AuthenticationManager authenticationManager
+            AuthenticationManager authenticationManager,
+            VerificacaoService verificacaoService,
+            OAuth2Service oauth2Service
     ) {
         this.usuarioService = usuarioService;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
+        this.verificacaoService = verificacaoService;
+        this.oauth2Service = oauth2Service;
     }
 
     @PostMapping("/register")
@@ -118,5 +126,68 @@ public class AuthController {
         );
 
         return ResponseEntity.ok(response);
+    }
+
+    // ========== 2FA Endpoints ==========
+
+    @PostMapping("/2fa/enviar-codigo")
+    public ResponseEntity<Map<String, String>> enviarCodigoVerificacao(
+            @Valid @RequestBody EnviarCodigoRequest request) {
+        logger.info("Enviando código de verificação para: {}", request.email());
+        
+        try {
+            verificacaoService.enviarCodigoVerificacao(request.email());
+            return ResponseEntity.ok(Map.of("message", "Código enviado com sucesso"));
+        } catch (Exception e) {
+            logger.error("Erro ao enviar código: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Erro ao enviar código de verificação"));
+        }
+    }
+
+    @PostMapping("/2fa/verificar-codigo")
+    public ResponseEntity<Map<String, Object>> verificarCodigo(
+            @Valid @RequestBody VerificarCodigoRequest request) {
+        logger.info("Verificando código para: {}", request.email());
+        
+        boolean valido = verificacaoService.verificarCodigo(request.email(), request.codigo());
+        
+        if (valido) {
+            return ResponseEntity.ok(Map.of(
+                    "valido", true,
+                    "message", "Código verificado com sucesso"
+            ));
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of(
+                            "valido", false,
+                            "error", "Código inválido ou expirado"
+                    ));
+        }
+    }
+
+    // ========== OAuth2 Callback ==========
+    
+    @GetMapping("/oauth2/callback/google")
+    public RedirectView googleCallback(@RequestParam("code") String code) {
+        try {
+            logger.info("Recebendo callback do Google OAuth2");
+            
+            // Processar código e obter/criar usuário
+            Usuario usuario = oauth2Service.processGoogleCallback(code);
+            
+            // Gerar JWT token
+            String token = jwtService.generateToken(usuario);
+            
+            // Redirecionar para o frontend com o token
+            String frontendUrl = "http://localhost:3000/auth/success?token=" + token;
+            
+            logger.info("Login OAuth2 bem-sucedido para: {}", usuario.getEmail());
+            return new RedirectView(frontendUrl);
+            
+        } catch (Exception e) {
+            logger.error("Erro no callback OAuth2", e);
+            return new RedirectView("http://localhost:3000/login?error=" + e.getMessage());
+        }
     }
 }
