@@ -53,9 +53,21 @@ mvn spring-boot:run
 curl http://localhost:8080/api/health
 ```
 
-**Listar produtos:**
+**Listar imóveis:**
 ```bash
-curl http://localhost:8080/api/produtos
+curl http://localhost:8080/api/imoveis
+```
+
+**Buscar imóveis com filtros:**
+```bash
+# Busca por cidade e características
+curl "http://localhost:8080/api/imoveis?cidade=Curitiba&quartosMin=2&banheirosMin=1&vagasMin=1"
+
+# Busca por faixa de preço e área
+curl "http://localhost:8080/api/imoveis?valorMin=300000&valorMax=800000&areaMin=50&areaMax=200"
+
+# Busca textual (procura em múltiplos campos)
+curl "http://localhost:8080/api/imoveis?busca=Apartamento"
 ```
 
 ## 📁 Estrutura do Projeto
@@ -120,7 +132,7 @@ Resposta:
 #### **Listar Imóveis**
 ```
 GET /api/imoveis
-GET /api/imoveis?uf=SP&valorMin=300000&valorMax=800000&page=0&size=20
+GET /api/imoveis?uf=SP&cidade=Curitiba&valorMin=300000&valorMax=800000&quartosMin=2&banheirosMin=1&vagasMin=1&areaMin=50&areaMax=200&page=0&size=20
 ```
 
 **Parâmetros:**
@@ -130,7 +142,12 @@ GET /api/imoveis?uf=SP&valorMin=300000&valorMax=800000&page=0&size=20
 - `instituicao` (opcional): Instituição financeira
 - `valorMin` (opcional): Valor mínimo
 - `valorMax` (opcional): Valor máximo
-- `busca` (opcional): Busca por texto na descrição
+- `busca` (opcional): Busca textual (descrição, cidade, bairro, endereço, tipo, instituição)
+- `quartosMin` (opcional): Número mínimo de quartos
+- `banheirosMin` (opcional): Número mínimo de banheiros
+- `vagasMin` (opcional): Número mínimo de vagas de garagem
+- `areaMin` (opcional): Área mínima em m²
+- `areaMax` (opcional): Área máxima em m²
 - `page` (padrão: 0): Página
 - `size` (padrão: 20): Itens por página
 - `sortBy` (padrão: dataLeilao): Campo de ordenação
@@ -147,19 +164,45 @@ POST /api/imoveis
 Content-Type: application/json
 
 {
-  "numeroLeilao": "LEILAO-001",
-  "descricao": "Apartamento 3 quartos",
-  "valorAvaliacao": 450000,
-  "dataLeilao": "2026-03-15",
-  "uf": "SP",
-  "instituicao": "Caixa Econômica Federal",
-  "linkEdital": "https://exemplo.com",
-  "cidade": "São Paulo",
-  "bairro": "Vila Mariana",
-  "areaTotal": 95.5,
-  "tipoImovel": "Apartamento"
+  "numeroLeilao": "2026-015",
+  "descricao": "Casa de praia mobiliada, 4 suítes, piscina infinity com borda infinita e vista para o mar",
+  "valorAvaliacao": 4500000.00,
+  "dataLeilao": "2026-06-01T11:00:00",
+  "uf": "SC",
+  "instituicao": "Santander",
+  "linkEdital": "https://example.com/leilao/015",
+  "cidade": "Florianópolis",
+  "bairro": "Jurerê Internacional",
+  "areaTotal": 380.0,
+  "tipoImovel": "CASA",
+  "quartos": 4,
+  "banheiros": 5,
+  "vagas": 4,
+  "endereco": "Rua das Bromélias, 789",
+  "cep": "88053-300",
+  "latitude": -27.4185,
+  "longitude": -48.4953,
+  "condicao": "NOVO",
+  "aceitaFinanciamento": true,
+  "observacoes": "Casa de praia de alto padrão completamente mobiliada e decorada por designer de interiores. 4 suítes com varanda e vista mar. Piscina infinity aquecida com borda infinita integrada ao mar. Deck em cumaru, jacuzzi para 8 pessoas. Cozinha gourmet Bertazzoni, adega climatizada, churrasqueira com forno de pizza. Sistema de som ambiente Sonos, ar condicionado em todos os ambientes. Gerador de energia. Segurança 24h no condomínio, acesso privativo à praia."
 }
 ```
+
+**Campos obrigatórios:**
+- `numeroLeilao` - Identificador único do leilão
+- `descricao` - Descrição do imóvel
+- `valorAvaliacao` - Valor de avaliação
+- `dataLeilao` - Data do leilão (ISO 8601)
+- `uf` - Estado (2 letras)
+- `instituicao` - Instituição organizadora
+
+**Campos opcionais:**
+- `linkEdital`, `cidade`, `bairro`, `areaTotal`, `tipoImovel`
+- `quartos`, `banheiros`, `vagas` - Características do imóvel
+- `endereco`, `cep`, `latitude`, `longitude` - Localização
+- `condicao` - Estado do imóvel (NOVO, USADO, REFORMADO)
+- `aceitaFinanciamento` - Boolean
+- `observacoes` - Detalhes adicionais
 
 #### **Atualizar Imóvel (Completo)**
 ```
@@ -167,17 +210,27 @@ PUT /api/imoveis/{id}
 Content-Type: application/json
 
 {
-  "numeroLeilao": "LEILAO-001",
-  "descricao": "Apartamento atualizado",
-  "valorAvaliacao": 480000,
-  "dataLeilao": "2026-04-10",
-  "uf": "SP",
-  "instituicao": "Banco do Brasil",
-  "linkEdital": "https://exemplo.com/novo",
-  "cidade": "São Paulo",
-  "bairro": "Moema",
-  "areaTotal": 100,
-  "tipoImovel": "Apartamento"
+  "numeroLeilao": "2026-015",
+  "descricao": "Casa de praia mobiliada atualizada",
+  "valorAvaliacao": 4800000.00,
+  "dataLeilao": "2026-06-01T11:00:00",
+  "uf": "SC",
+  "instituicao": "Santander",
+  "linkEdital": "https://example.com/leilao/015",
+  "cidade": "Florianópolis",
+  "bairro": "Jurerê Internacional",
+  "areaTotal": 380.0,
+  "tipoImovel": "CASA",
+  "quartos": 4,
+  "banheiros": 5,
+  "vagas": 4,
+  "endereco": "Rua das Bromélias, 789",
+  "cep": "88053-300",
+  "latitude": -27.4185,
+  "longitude": -48.4953,
+  "condicao": "NOVO",
+  "aceitaFinanciamento": true,
+  "observacoes": "Observações atualizadas"
 }
 ```
 

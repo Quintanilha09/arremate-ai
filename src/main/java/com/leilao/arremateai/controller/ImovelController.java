@@ -106,4 +106,9 @@ public class ImovelController {
         imovelService.removerImovel(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/{id}/validar")
+    public ResponseEntity<?> validarImovel(@PathVariable UUID id) {
+        return ResponseEntity.ok(imovelService.validarImovel(id));
+    }
 }

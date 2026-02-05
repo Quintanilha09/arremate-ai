@@ -6,6 +6,7 @@ import com.leilao.arremateai.dto.ImovelRequest;
 import com.leilao.arremateai.dto.ImovelResponse;
 import com.leilao.arremateai.mapper.ImovelMapper;
 import com.leilao.arremateai.repository.ImovelRepository;
+import com.leilao.arremateai.repository.ImagemImovelRepository;
 import com.leilao.arremateai.specification.ImovelSpecifications;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +17,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -25,15 +28,18 @@ public class ImovelService {
     private static final Logger log = LoggerFactory.getLogger(ImovelService.class);
     private final LeilaoPublicoClient leilaoClient;
     private final ImovelRepository imovelRepository;
+    private final ImagemImovelRepository imagemRepository;
     private final ImovelMapper imovelMapper;
 
     public ImovelService(
         LeilaoPublicoClient leilaoClient,
         ImovelRepository imovelRepository,
+        ImagemImovelRepository imagemRepository,
         ImovelMapper imovelMapper
     ) {
         this.leilaoClient = leilaoClient;
         this.imovelRepository = imovelRepository;
+        this.imagemRepository = imagemRepository;
         this.imovelMapper = imovelMapper;
     }
 
@@ -279,5 +285,31 @@ public class ImovelService {
         imovel.setAtivo(false);
         imovelRepository.save(imovel);
         log.info("Imóvel removido com sucesso (marcado como inativo): ID {}", id);
+    }
+
+    public Map<String, Object> validarImovel(UUID id) {
+        log.info("Validando imóvel ID: {}", id);
+
+        Imovel imovel = imovelRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Imóvel não encontrado com ID: " + id));
+
+        Map<String, Object> validacao = new HashMap<>();
+        boolean valido = true;
+        String mensagem = "Imóvel válido";
+
+        // Verificar se tem pelo menos uma imagem
+        long totalImagens = imagemRepository.findByImovelIdOrderByOrdemAsc(id).size();
+        
+        if (totalImagens == 0) {
+            valido = false;
+            mensagem = "Imóvel deve ter pelo menos uma imagem";
+        }
+
+        validacao.put("valido", valido);
+        validacao.put("mensagem", mensagem);
+        validacao.put("totalImagens", totalImagens);
+        validacao.put("imovelId", id);
+
+        return validacao;
     }
 }
