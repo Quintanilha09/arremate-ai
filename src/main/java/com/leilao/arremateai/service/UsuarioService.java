@@ -128,6 +128,23 @@ public class UsuarioService implements UserDetailsService {
         log.info("Usuário desativado com sucesso");
     }
 
+    public void redefinirSenha(String email, String novaSenha) {
+        log.info("Redefinindo senha para usuário: {}", email);
+
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado: " + email));
+
+        // Verificar se é usuário OAuth2 (sem senha)
+        if (usuario.getSenha() == null || usuario.getSenha().isEmpty()) {
+            throw new IllegalArgumentException("Usuário autenticado via Google. Não é possível redefinir senha.");
+        }
+
+        usuario.setSenha(passwordEncoder.encode(novaSenha));
+        usuarioRepository.save(usuario);
+
+        log.info("Senha redefinida com sucesso");
+    }
+
     public UsuarioResponse converterParaResponse(Usuario usuario) {
         return new UsuarioResponse(
                 usuario.getId(),
@@ -137,7 +154,8 @@ public class UsuarioService implements UserDetailsService {
                 usuario.getCpf(),
                 usuario.getTipo(),
                 usuario.getAtivo(),
-                usuario.getCreatedAt()
+                usuario.getCreatedAt(),
+                usuario.getAvatarUrl()
         );
     }
 }

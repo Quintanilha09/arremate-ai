@@ -43,6 +43,9 @@ public class Usuario implements UserDetails {
     @Column(length = 14)
     private String cpf;
 
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private TipoUsuario tipo = TipoUsuario.COMPRADOR;

@@ -190,4 +190,55 @@ public class AuthController {
             return new RedirectView("http://localhost:3000/login?error=" + e.getMessage());
         }
     }
+
+    // ========== Recuperação de Senha ==========
+
+    @PostMapping("/recuperar-senha")
+    public ResponseEntity<Map<String, String>> recuperarSenha(
+            @Valid @RequestBody RecuperarSenhaRequest request) {
+        logger.info("Solicitação de recuperação de senha para: {}", request.email());
+        
+        try {
+            // Verificar se o usuário existe
+            usuarioService.buscarPorEmail(request.email());
+            
+            // Enviar código de verificação
+            verificacaoService.enviarCodigoVerificacao(request.email());
+            
+            return ResponseEntity.ok(Map.of("message", "Código de recuperação enviado para seu e-mail"));
+        } catch (Exception e) {
+            logger.error("Erro ao enviar código de recuperação: {}", e.getMessage());
+            // Por segurança, não informar se o email existe ou não
+            return ResponseEntity.ok(Map.of("message", "Se o e-mail estiver cadastrado, você receberá um código de recuperação"));
+        }
+    }
+
+    @PostMapping("/redefinir-senha")
+    public ResponseEntity<Map<String, String>> redefinirSenha(
+            @Valid @RequestBody RedefinirSenhaRequest request) {
+        logger.info("Redefinindo senha para: {}", request.email());
+        
+        try {
+            // Verificar código
+            boolean codigoValido = verificacaoService.verificarCodigo(request.email(), request.codigo());
+            
+            if (!codigoValido) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Código inválido ou expirado"));
+            }
+            
+            // Redefinir senha
+            usuarioService.redefinirSenha(request.email(), request.novaSenha());
+            
+            return ResponseEntity.ok(Map.of("message", "Senha redefinida com sucesso"));
+        } catch (IllegalArgumentException e) {
+            logger.error("Erro ao redefinir senha: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Erro ao redefinir senha", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Erro ao redefinir senha"));
+        }
+    }
 }
