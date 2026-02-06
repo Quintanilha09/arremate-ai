@@ -3,6 +3,8 @@ package com.leilao.arremateai.service;
 import com.leilao.arremateai.domain.Usuario;
 import com.leilao.arremateai.dto.UsuarioRequest;
 import com.leilao.arremateai.dto.UsuarioResponse;
+import com.leilao.arremateai.exception.BusinessException;
+import com.leilao.arremateai.exception.ResourceNotFoundException;
 import com.leilao.arremateai.repository.UsuarioRepository;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
@@ -42,12 +44,12 @@ public class UsuarioService implements UserDetailsService {
 
         // Validar email único
         if (usuarioRepository.existsByEmail(request.email())) {
-            throw new IllegalArgumentException("Email já cadastrado");
+            throw new BusinessException("Email já cadastrado");
         }
 
         // Validar CPF único (se fornecido)
         if (request.cpf() != null && usuarioRepository.existsByCpf(request.cpf())) {
-            throw new IllegalArgumentException("CPF já cadastrado");
+            throw new BusinessException("CPF já cadastrado");
         }
 
         // Criar usuário
@@ -95,7 +97,7 @@ public class UsuarioService implements UserDetailsService {
         // Validar email único (se mudou)
         if (!usuario.getEmail().equals(request.email()) 
                 && usuarioRepository.existsByEmail(request.email())) {
-            throw new IllegalArgumentException("Email já cadastrado");
+            throw new BusinessException("Email já cadastrado");
         }
 
         // Atualizar campos
@@ -136,7 +138,7 @@ public class UsuarioService implements UserDetailsService {
 
         // Verificar se é usuário OAuth2 (sem senha)
         if (usuario.getSenha() == null || usuario.getSenha().isEmpty()) {
-            throw new IllegalArgumentException("Usuário autenticado via Google. Não é possível redefinir senha.");
+            throw new BusinessException("Usuário autenticado via Google. Não é possível redefinir senha.");
         }
 
         usuario.setSenha(passwordEncoder.encode(novaSenha));

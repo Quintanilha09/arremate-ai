@@ -4,6 +4,8 @@ import com.leilao.arremateai.domain.Usuario;
 import com.leilao.arremateai.dto.AlterarSenhaRequest;
 import com.leilao.arremateai.dto.AtualizarPerfilRequest;
 import com.leilao.arremateai.dto.PerfilResponse;
+import com.leilao.arremateai.exception.BusinessException;
+import com.leilao.arremateai.exception.ResourceNotFoundException;
 import com.leilao.arremateai.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,7 +44,7 @@ public class PerfilService {
         log.info("Buscando perfil do usuário: {}", email);
         
         Usuario usuario = usuarioRepository.findByEmail(email)
-            .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+            .orElseThrow(() -> new ResourceNotFoundException("Usuário", "email", email));
 
         return mapToResponse(usuario);
     }
@@ -55,7 +57,7 @@ public class PerfilService {
         log.info("Atualizando perfil do usuário: {}", email);
         
         Usuario usuario = usuarioRepository.findByEmail(email)
-            .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+            .orElseThrow(() -> new ResourceNotFoundException("Usuário", "email", email));
 
         // Atualiza apenas campos não nulos (permite atualização parcial)
         if (request.nome() != null && !request.nome().isBlank()) {
@@ -71,7 +73,7 @@ public class PerfilService {
             usuarioRepository.findByCpf(request.cpf())
                 .ifPresent(u -> {
                     if (!u.getId().equals(usuario.getId())) {
-                        throw new RuntimeException("CPF já cadastrado para outro usuário");
+                        throw new BusinessException("CPF já cadastrado para outro usuário");
                     }
                 });
             usuario.setCpf(request.cpf());
@@ -92,23 +94,23 @@ public class PerfilService {
         
         // Validação de senhas conferem
         if (!request.senhasConferem()) {
-            throw new RuntimeException("Nova senha e confirmação não conferem");
+            throw new BusinessException("Nova senha e confirmação não conferem");
         }
 
         Usuario usuario = usuarioRepository.findByEmail(email)
-            .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
-        // Verifica se usu\u00e1rio tem senha (n\u00e3o \u00e9 OAuth2)
+            .orElseThrow(() -> new ResourceNotFoundException("Usuário", "email", email));
+        // Verifica se usuário tem senha (não é OAuth2)
         if (usuario.getSenha() == null || usuario.getSenha().isEmpty()) {
-            throw new RuntimeException("Usu\u00e1rio autenticado via Google. N\u00e3o \u00e9 poss\u00edvel alterar senha.");
+            throw new BusinessException("Usuário autenticado via Google. Não é possível alterar senha.");
         }
         // Valida senha atual
         if (!passwordEncoder.matches(request.senhaAtual(), usuario.getSenha())) {
-            throw new RuntimeException("Senha atual incorreta");
+            throw new BusinessException("Senha atual incorreta");
         }
 
         // Valida que nova senha é diferente da atual
         if (passwordEncoder.matches(request.novaSenha(), usuario.getSenha())) {
-            throw new RuntimeException("Nova senha deve ser diferente da senha atual");
+            throw new BusinessException("Nova senha deve ser diferente da senha atual");
         }
 
         // Criptografa e salva nova senha
@@ -128,20 +130,20 @@ public class PerfilService {
         
         // Validações
         if (file.isEmpty()) {
-            throw new RuntimeException("Arquivo de imagem é obrigatório");
+            throw new BusinessException("Arquivo de imagem é obrigatório");
         }
 
         if (file.getSize() > MAX_FILE_SIZE) {
-            throw new RuntimeException("Arquivo muito grande. Máximo permitido: 5MB");
+            throw new BusinessException("Arquivo muito grande. Máximo permitido: 5MB");
         }
 
         String contentType = file.getContentType();
         if (contentType == null || !contentType.startsWith("image/")) {
-            throw new RuntimeException("Arquivo deve ser uma imagem (JPG, PNG, etc)");
+            throw new BusinessException("Arquivo deve ser uma imagem (JPG, PNG, etc)");
         }
 
         Usuario usuario = usuarioRepository.findByEmail(email)
-            .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+            .orElseThrow(() -> new ResourceNotFoundException("Usuário", "email", email));
 
         // Remove avatar antigo se existir
         if (usuario.getAvatarUrl() != null && !usuario.getAvatarUrl().isBlank()) {
@@ -168,7 +170,7 @@ public class PerfilService {
         log.info("Removendo avatar do usuário: {}", email);
         
         Usuario usuario = usuarioRepository.findByEmail(email)
-            .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+            .orElseThrow(() -> new ResourceNotFoundException("Usuário", "email", email));
 
         if (usuario.getAvatarUrl() != null && !usuario.getAvatarUrl().isBlank()) {
             removerAvatarAntigo(usuario.getAvatarUrl());

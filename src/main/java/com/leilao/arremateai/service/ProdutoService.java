@@ -1,6 +1,7 @@
 package com.leilao.arremateai.service;
 
 import com.leilao.arremateai.domain.Produto;
+import com.leilao.arremateai.exception.ResourceNotFoundException;
 import com.leilao.arremateai.repository.ProdutoRepository;
 import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +41,6 @@ public class ProdutoService {
     public Produto buscarPorId(Long id) {
         log.debug("Buscando produto por ID: {}", id);
         return produtoRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Produto não encontrado: " + id));
+            .orElseThrow(() -> new ResourceNotFoundException("Produto", "id", id));
     }
 }

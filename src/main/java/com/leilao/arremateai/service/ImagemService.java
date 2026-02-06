@@ -3,7 +3,9 @@ package com.leilao.arremateai.service;
 import com.leilao.arremateai.domain.ImagemImovel;
 import com.leilao.arremateai.domain.Imovel;
 import com.leilao.arremateai.dto.ImagemResponse;
+import com.leilao.arremateai.exception.BusinessException;
 import com.leilao.arremateai.exception.FileStorageException;
+import com.leilao.arremateai.exception.ResourceNotFoundException;
 import com.leilao.arremateai.mapper.ImovelMapper;
 import com.leilao.arremateai.repository.ImagemImovelRepository;
 import com.leilao.arremateai.repository.ImovelRepository;
@@ -68,10 +70,10 @@ public class ImagemService {
         log.info("Iniciando upload de {} imagens para imóvel ID: {}", files.size(), imovelId);
 
         Imovel imovel = imovelRepository.findById(imovelId)
-                .orElseThrow(() -> new IllegalArgumentException("Imóvel não encontrado com ID: " + imovelId));
+                .orElseThrow(() -> new ResourceNotFoundException("Imóvel", "id", imovelId));
 
         if (!imovel.getAtivo()) {
-            throw new IllegalArgumentException("Não é possível adicionar imagens a um imóvel inativo");
+            throw new BusinessException("Não é possível adicionar imagens a um imóvel inativo");
         }
 
         // Pegar a maior ordem atual
@@ -117,7 +119,7 @@ public class ImagemService {
         log.info("Listando imagens do imóvel ID: {}", imovelId);
         
         if (!imovelRepository.existsById(imovelId)) {
-            throw new IllegalArgumentException("Imóvel não encontrado com ID: " + imovelId);
+            throw new ResourceNotFoundException("Imóvel", "id", imovelId);
         }
 
         return imagemRepository.findByImovelIdOrderByOrdemAsc(imovelId)
@@ -131,7 +133,7 @@ public class ImagemService {
         log.info("Atualizando imagem ID: {}", imagemId);
 
         ImagemImovel imagem = imagemRepository.findById(imagemId)
-                .orElseThrow(() -> new IllegalArgumentException("Imagem não encontrada com ID: " + imagemId));
+                .orElseThrow(() -> new ResourceNotFoundException("Imagem", "id", imagemId));
 
         if (legenda != null) {
             imagem.setLegenda(legenda);
@@ -150,7 +152,7 @@ public class ImagemService {
         log.info("Definindo imagem ID {} como principal", imagemId);
 
         ImagemImovel imagem = imagemRepository.findById(imagemId)
-                .orElseThrow(() -> new IllegalArgumentException("Imagem não encontrada com ID: " + imagemId));
+                .orElseThrow(() -> new ResourceNotFoundException("Imagem", "id", imagemId));
 
         UUID imovelId = imagem.getImovel().getId();
 
@@ -172,14 +174,14 @@ public class ImagemService {
         log.info("Removendo imagem ID: {}", imagemId);
 
         ImagemImovel imagem = imagemRepository.findById(imagemId)
-                .orElseThrow(() -> new IllegalArgumentException("Imagem não encontrada com ID: " + imagemId));
+                .orElseThrow(() -> new ResourceNotFoundException("Imagem", "id", imagemId));
 
         // Validar se não é a última imagem do imóvel
         UUID imovelId = imagem.getImovel().getId();
         long totalImagens = imagemRepository.findByImovelIdOrderByOrdemAsc(imovelId).size();
         
         if (totalImagens <= 1) {
-            throw new IllegalArgumentException("Não é possível remover a última imagem do imóvel. Cada imóvel deve ter pelo menos uma imagem.");
+            throw new BusinessException("Não é possível remover a última imagem do imóvel. Cada imóvel deve ter pelo menos uma imagem.");
         }
 
         // Remove arquivo físico
@@ -209,11 +211,11 @@ public class ImagemService {
 
     private void validarArquivo(MultipartFile file) {
         if (file.isEmpty()) {
-            throw new IllegalArgumentException("Arquivo vazio");
+            throw new BusinessException("Arquivo vazio");
         }
 
         if (file.getSize() > MAX_FILE_SIZE) {
-            throw new IllegalArgumentException(
+            throw new BusinessException(
                     String.format("Arquivo muito grande: %d bytes. Máximo: 5MB", file.getSize())
             );
         }
@@ -222,7 +224,7 @@ public class ImagemService {
         String extension = getFileExtension(filename).toLowerCase();
 
         if (!ALLOWED_EXTENSIONS.contains(extension)) {
-            throw new IllegalArgumentException(
+            throw new BusinessException(
                     String.format("Formato não permitido: %s. Permitidos: %s", extension, ALLOWED_EXTENSIONS)
             );
         }
@@ -231,7 +233,7 @@ public class ImagemService {
         try {
             BufferedImage image = ImageIO.read(file.getInputStream());
             if (image == null) {
-                throw new IllegalArgumentException("Arquivo não é uma imagem válida");
+                throw new BusinessException("Arquivo não é uma imagem válida");
             }
         } catch (IOException ex) {
             throw new FileStorageException("Erro ao validar imagem", ex);

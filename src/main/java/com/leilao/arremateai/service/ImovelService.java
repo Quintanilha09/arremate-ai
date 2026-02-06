@@ -6,6 +6,8 @@ import com.leilao.arremateai.domain.TipoUsuario;
 import com.leilao.arremateai.domain.Usuario;
 import com.leilao.arremateai.dto.ImovelRequest;
 import com.leilao.arremateai.dto.ImovelResponse;
+import com.leilao.arremateai.exception.BusinessException;
+import com.leilao.arremateai.exception.ResourceNotFoundException;
 import com.leilao.arremateai.mapper.ImovelMapper;
 import com.leilao.arremateai.repository.ImovelRepository;
 import com.leilao.arremateai.repository.ImagemImovelRepository;

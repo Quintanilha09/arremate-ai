@@ -2,6 +2,8 @@ package com.leilao.arremateai.service;
 
 import com.leilao.arremateai.domain.*;
 import com.leilao.arremateai.dto.*;
+import com.leilao.arremateai.exception.BusinessException;
+import com.leilao.arremateai.exception.ResourceNotFoundException;
 import com.leilao.arremateai.mapper.DocumentoVendedorMapper;
 import com.leilao.arremateai.mapper.VendedorMapper;
 import com.leilao.arremateai.repository.DocumentoVendedorRepository;
@@ -51,12 +53,12 @@ public class VendedorService {
         
         // Validar se já existe vendedor com este CNPJ
         if (usuarioRepository.existsByCnpj(request.getCnpj())) {
-            throw new IllegalArgumentException("Já existe um vendedor cadastrado com este CNPJ");
+            throw new BusinessException("Já existe um vendedor cadastrado com este CNPJ");
         }
         
         // Validar se email já está em uso
         if (usuarioRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Este email já está em uso");
+            throw new BusinessException("Este email já está em uso");
         }
         
         // Validar CNPJ na Receita Federal via ReceitaWS
@@ -339,7 +341,7 @@ public class VendedorService {
                 .orElseThrow(() -> new IllegalArgumentException("Vendedor não encontrado"));
         
         if (usuario.getTipo() != TipoUsuario.VENDEDOR) {
-            throw new IllegalArgumentException("Usuário não é um vendedor");
+            throw new BusinessException("Usuário não é um vendedor");
         }
         
         return usuario;

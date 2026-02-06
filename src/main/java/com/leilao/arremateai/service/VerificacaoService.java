@@ -62,7 +62,9 @@ public class VerificacaoService {
             return false;
         }
 
-        CodigoVerificacao codigoVerificacao = codigoOpt.get();
+        CodigoVerificacao codigoVerificacao = codigoOpt.orElseThrow(
+            () -> new IllegalStateException("Código deveria estar presente após verificação")
+        );
 
         if (codigoVerificacao.isExpired()) {
             logger.warn("Código expirado para: {}", email);

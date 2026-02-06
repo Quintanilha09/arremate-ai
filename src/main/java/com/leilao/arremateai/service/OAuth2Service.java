@@ -81,7 +81,11 @@ public class OAuth2Service {
             
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 logger.info("✓ Token obtido com sucesso do Google");
-                return (String) response.getBody().get("access_token");
+                Object accessToken = response.getBody().get("access_token");
+                if (accessToken == null) {
+                    throw new RuntimeException("Access token não encontrado na resposta do Google");
+                }
+                return (String) accessToken;
             }
             
             logger.error("✗ Falha ao obter token: Status {}, Body: {}", response.getStatusCode(), response.getBody());
@@ -119,12 +123,24 @@ public class OAuth2Service {
             
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 Map<String, Object> body = response.getBody();
-                logger.info("Informações do usuário obtidas: {}", body.get("email"));
-                return new OAuth2UserInfo(
-                    (String) body.get("email"),
-                    (String) body.get("name"),
-                    (String) body.get("id")
-                );
+                
+                // Valida campos obrigatórios
+                String email = (String) body.get("email");
+                String name = (String) body.get("name");
+                String id = (String) body.get("id");
+                
+                if (email == null || email.isBlank()) {
+                    throw new RuntimeException("Email não encontrado na resposta do Google");
+                }
+                if (name == null || name.isBlank()) {
+                    throw new RuntimeException("Nome não encontrado na resposta do Google");
+                }
+                if (id == null || id.isBlank()) {
+                    throw new RuntimeException("ID não encontrado na resposta do Google");
+                }
+                
+                logger.info("Informações do usuário obtidas: {}", email);
+                return new OAuth2UserInfo(email, name, id);
             }
             
             logger.error("Falha ao obter userinfo: Status {}", response.getStatusCode());
