@@ -43,12 +43,49 @@ public class Usuario implements UserDetails {
     @Column(length = 14)
     private String cpf;
 
+    @Column(name = "avatar_url", length = 500)
+    private String avatarUrl;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private TipoUsuario tipo = TipoUsuario.COMPRADOR;
 
     @Column(nullable = false)
     private Boolean ativo = true;
+
+    // ===== CAMPOS VENDEDOR PJ =====
+    
+    @Column(length = 18, unique = true)
+    private String cnpj;
+    
+    @Column(name = "razao_social", length = 300)
+    private String razaoSocial;
+    
+    @Column(name = "nome_fantasia", length = 300)
+    private String nomeFantasia;
+    
+    @Column(name = "inscricao_estadual", length = 20)
+    private String inscricaoEstadual;
+    
+    @Column(name = "email_corporativo", length = 200)
+    private String emailCorporativo;
+    
+    @Column(name = "email_corporativo_verificado")
+    private Boolean emailCorporativoVerificado = false;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status_vendedor", length = 30)
+    private StatusVendedor statusVendedor = StatusVendedor.PENDENTE_DOCUMENTOS;
+    
+    @Column(name = "motivo_rejeicao", columnDefinition = "TEXT")
+    private String motivoRejeicao;
+    
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "aprovado_por")
+    private Usuario aprovadoPor;
+    
+    @Column(name = "aprovado_em")
+    private LocalDateTime aprovadoEm;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

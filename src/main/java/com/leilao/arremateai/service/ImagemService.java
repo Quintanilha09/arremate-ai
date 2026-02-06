@@ -174,6 +174,14 @@ public class ImagemService {
         ImagemImovel imagem = imagemRepository.findById(imagemId)
                 .orElseThrow(() -> new IllegalArgumentException("Imagem não encontrada com ID: " + imagemId));
 
+        // Validar se não é a última imagem do imóvel
+        UUID imovelId = imagem.getImovel().getId();
+        long totalImagens = imagemRepository.findByImovelIdOrderByOrdemAsc(imovelId).size();
+        
+        if (totalImagens <= 1) {
+            throw new IllegalArgumentException("Não é possível remover a última imagem do imóvel. Cada imóvel deve ter pelo menos uma imagem.");
+        }
+
         // Remove arquivo físico
         try {
             String filename = extrairNomeArquivo(imagem.getUrl());
@@ -188,7 +196,6 @@ public class ImagemService {
         imagemRepository.delete(imagem);
 
         // Se era a principal, define outra como principal
-        UUID imovelId = imagem.getImovel().getId();
         if (imagem.getPrincipal()) {
             imagemRepository.findByImovelIdOrderByOrdemAsc(imovelId)
                     .stream()

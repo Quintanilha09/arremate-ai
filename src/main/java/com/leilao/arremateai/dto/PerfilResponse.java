@@ -5,14 +5,19 @@ import com.leilao.arremateai.domain.TipoUsuario;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-public record UsuarioResponse(
+/**
+ * DTO para resposta de dados do perfil do usuário
+ * Inclui informações completas do perfil, incluindo avatar
+ */
+public record PerfilResponse(
     UUID id,
     String nome,
     String email,
     String telefone,
     String cpf,
     TipoUsuario tipo,
+    String avatarUrl,
     Boolean ativo,
     LocalDateTime createdAt,
-    String avatarUrl
+    LocalDateTime updatedAt
 ) {}

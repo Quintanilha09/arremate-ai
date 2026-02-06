@@ -97,6 +97,11 @@ public class Imovel {
     @Column(name = "status", length = 20)
     private String status = "DISPONIVEL"; // DISPONIVEL, VENDIDO, SUSPENSO
 
+    // Relacionamento com usuário criador
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "usuario_id")
+    private Usuario usuario;
+
     // Relacionamento com imagens
     @OneToMany(mappedBy = "imovel", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<ImagemImovel> imagens = new ArrayList<>();

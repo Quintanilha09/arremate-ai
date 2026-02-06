@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,11 +24,11 @@ public class UsuarioService implements UserDetailsService {
     private static final Logger log = LoggerFactory.getLogger(UsuarioService.class);
     
     private final UsuarioRepository usuarioRepository;
-    private final BCryptPasswordEncoder passwordEncoder;
+    private final PasswordEncoder passwordEncoder;
 
-    public UsuarioService(UsuarioRepository usuarioRepository) {
+    public UsuarioService(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
-        this.passwordEncoder = new BCryptPasswordEncoder();
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -128,6 +128,23 @@ public class UsuarioService implements UserDetailsService {
         log.info("Usuário desativado com sucesso");
     }
 
+    public void redefinirSenha(String email, String novaSenha) {
+        log.info("Redefinindo senha para usuário: {}", email);
+
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado: " + email));
+
+        // Verificar se é usuário OAuth2 (sem senha)
+        if (usuario.getSenha() == null || usuario.getSenha().isEmpty()) {
+            throw new IllegalArgumentException("Usuário autenticado via Google. Não é possível redefinir senha.");
+        }
+
+        usuario.setSenha(passwordEncoder.encode(novaSenha));
+        usuarioRepository.save(usuario);
+
+        log.info("Senha redefinida com sucesso");
+    }
+
     public UsuarioResponse converterParaResponse(Usuario usuario) {
         return new UsuarioResponse(
                 usuario.getId(),
@@ -137,7 +154,8 @@ public class UsuarioService implements UserDetailsService {
                 usuario.getCpf(),
                 usuario.getTipo(),
                 usuario.getAtivo(),
-                usuario.getCreatedAt()
+                usuario.getCreatedAt(),
+                usuario.getAvatarUrl()
         );
     }
 }
