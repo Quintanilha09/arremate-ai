@@ -67,6 +67,9 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         logger.info("Tentativa de login para: {}", request.email());
+        logger.info("Senha recebida - Tamanho: {}, Primeiros 3 chars: {}...", 
+                    request.senha().length(), 
+                    request.senha().substring(0, Math.min(3, request.senha().length())));
 
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(

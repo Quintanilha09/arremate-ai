@@ -1,5 +1,6 @@
 package com.leilao.arremateai.controller;
 
+import com.leilao.arremateai.dto.AtualizarStatusRequest;
 import com.leilao.arremateai.dto.ImovelRequest;
 import com.leilao.arremateai.dto.ImovelResponse;
 import com.leilao.arremateai.service.ImovelService;
@@ -11,6 +12,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -96,9 +99,11 @@ public class ImovelController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ImovelResponse> cadastrarImovel(@Valid @RequestBody ImovelRequest request) {
-        ImovelResponse imovel = imovelService.cadastrarImovel(request);
+    @PreAuthorize("hasAnyRole('VENDEDOR', 'ADMIN')")
+    public ResponseEntity<ImovelResponse> cadastrarImovel(
+            @Valid @RequestBody ImovelRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        ImovelResponse imovel = imovelService.cadastrarImovel(request, userDetails.getUsername());
         return ResponseEntity.status(HttpStatus.CREATED).body(imovel);
     }
 
@@ -130,5 +135,37 @@ public class ImovelController {
     @GetMapping("/{id}/validar")
     public ResponseEntity<?> validarImovel(@PathVariable UUID id) {
         return ResponseEntity.ok(imovelService.validarImovel(id));
+    }
+
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('VENDEDOR', 'ADMIN')")
+    public ResponseEntity<ImovelResponse> atualizarStatus(
+            @PathVariable UUID id,
+            @Valid @RequestBody AtualizarStatusRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        ImovelResponse imovel = imovelService.atualizarStatus(
+            id, request.getStatus(), userDetails.getUsername()
+        );
+        return ResponseEntity.ok(imovel);
+    }
+
+    @GetMapping("/meus")
+    @PreAuthorize("hasAnyRole('VENDEDOR', 'ADMIN')")
+    public ResponseEntity<?> buscarMeusImoveis(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "DESC") String direction
+    ) {
+        Sort.Direction sortDirection = "DESC".equalsIgnoreCase(direction) ? Sort.Direction.DESC : Sort.Direction.ASC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
+        
+        Page<ImovelResponse> resultado = imovelService.buscarImoveisPorUsuario(
+            userDetails.getUsername(), status, pageable
+        );
+        
+        return ResponseEntity.ok(resultado);
     }
 }

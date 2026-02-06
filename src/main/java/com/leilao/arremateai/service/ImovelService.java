@@ -2,11 +2,15 @@ package com.leilao.arremateai.service;
 
 import com.leilao.arremateai.client.LeilaoPublicoClient;
 import com.leilao.arremateai.domain.Imovel;
+import com.leilao.arremateai.domain.StatusVendedor;
+import com.leilao.arremateai.domain.TipoUsuario;
+import com.leilao.arremateai.domain.Usuario;
 import com.leilao.arremateai.dto.ImovelRequest;
 import com.leilao.arremateai.dto.ImovelResponse;
 import com.leilao.arremateai.mapper.ImovelMapper;
 import com.leilao.arremateai.repository.ImovelRepository;
 import com.leilao.arremateai.repository.ImagemImovelRepository;
+import com.leilao.arremateai.repository.UsuarioRepository;
 import com.leilao.arremateai.specification.ImovelSpecifications;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,17 +34,20 @@ public class ImovelService {
     private final ImovelRepository imovelRepository;
     private final ImagemImovelRepository imagemRepository;
     private final ImovelMapper imovelMapper;
+    private final UsuarioRepository usuarioRepository;
 
     public ImovelService(
         LeilaoPublicoClient leilaoClient,
         ImovelRepository imovelRepository,
         ImagemImovelRepository imagemRepository,
-        ImovelMapper imovelMapper
+        ImovelMapper imovelMapper,
+        UsuarioRepository usuarioRepository
     ) {
         this.leilaoClient = leilaoClient;
         this.imovelRepository = imovelRepository;
         this.imagemRepository = imagemRepository;
         this.imovelMapper = imovelMapper;
+        this.usuarioRepository = usuarioRepository;
     }
 
     public Page<ImovelResponse> buscarComFiltros(
@@ -118,13 +125,24 @@ public class ImovelService {
     }
 
     @Transactional
-    public ImovelResponse cadastrarImovel(ImovelRequest request) {
-        log.info("Cadastrando imóvel: {}", request.getNumeroLeilao());
+    public ImovelResponse cadastrarImovel(ImovelRequest request, String emailUsuario) {
+        log.info("Cadastrando imóvel: {} para usuário: {}", request.getNumeroLeilao(), emailUsuario);
 
         validarImovelNaoDuplicado(request.getNumeroLeilao());
 
-        var imovelSalvo = imovelRepository.save(imovelMapper.paraEntidade(request));
-        log.info("Imóvel cadastrado com ID: {}", imovelSalvo.getId());
+        // Buscar usuário
+        Usuario usuario = usuarioRepository.findByEmail(emailUsuario)
+            .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado com email: " + emailUsuario));
+
+        // Validar se vendedor está aprovado
+        validarVendedorAprovado(usuario);
+
+        // Criar imóvel e associar usuário
+        Imovel imovel = imovelMapper.paraEntidade(request);
+        imovel.setUsuario(usuario);
+        
+        var imovelSalvo = imovelRepository.save(imovel);
+        log.info("Imóvel cadastrado com ID: {} para usuário: {}", imovelSalvo.getId(), emailUsuario);
 
         return imovelMapper.paraResponse(imovelSalvo);
     }
@@ -311,5 +329,78 @@ public class ImovelService {
         validacao.put("imovelId", id);
 
         return validacao;
+    }
+
+    public Page<ImovelResponse> buscarImoveisPorUsuario(String email, String status, Pageable pageable) {
+        log.info("Buscando imóveis do usuário: {}, status: {}", email, status);
+
+        Page<Imovel> imoveis;
+        
+        if (status != null && !status.isEmpty()) {
+            imoveis = imovelRepository.findByUsuarioEmailAndStatus(email, status, pageable);
+        } else {
+            imoveis = imovelRepository.findByUsuarioEmail(email, pageable);
+        }
+
+        return imoveis.map(imovelMapper::paraResponse);
+    }
+
+    @Transactional
+    public ImovelResponse atualizarStatus(UUID id, String novoStatus, String emailUsuario) {
+        log.info("Atualizando status do imóvel {} para {}, usuário: {}", id, novoStatus, emailUsuario);
+
+        Imovel imovel = imovelRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Imóvel não encontrado com ID: " + id));
+
+        if (!imovel.getAtivo()) {
+            throw new IllegalArgumentException("Imóvel com ID " + id + " está inativo");
+        }
+
+        // Buscar usuário autenticado
+        Usuario usuario = usuarioRepository.findByEmail(emailUsuario)
+            .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
+
+        // Verificar se é o dono do imóvel ou ADMIN
+        boolean isAdmin = usuario.getTipo() == TipoUsuario.ADMIN;
+        boolean isDono = imovel.getUsuario() != null && 
+            imovel.getUsuario().getEmail().equals(emailUsuario);
+
+        if (!isAdmin && !isDono) {
+            throw new IllegalArgumentException("Você não tem permissão para alterar o status deste imóvel");
+        }
+
+        imovel.setStatus(novoStatus);
+        var imovelAtualizado = imovelRepository.save(imovel);
+        
+        log.info("Status do imóvel {} atualizado para {}", id, novoStatus);
+        return imovelMapper.paraResponse(imovelAtualizado);
+    }
+
+    /**
+     * Valida se vendedor está APROVADO antes de permitir criar/editar imóveis
+     */
+    private void validarVendedorAprovado(Usuario usuario) {
+        if (usuario.getTipo() == TipoUsuario.VENDEDOR) {
+            if (usuario.getStatusVendedor() == null || usuario.getStatusVendedor() != StatusVendedor.APROVADO) {
+                String mensagem;
+                switch (usuario.getStatusVendedor()) {
+                    case PENDENTE_DOCUMENTOS:
+                        mensagem = "Você precisa enviar os documentos para aprovação antes de anunciar imóveis";
+                        break;
+                    case PENDENTE_APROVACAO:
+                        mensagem = "Sua conta está em análise. Aguarde a aprovação do administrador para anunciar imóveis";
+                        break;
+                    case REJEITADO:
+                        mensagem = "Sua conta foi rejeitada. Motivo: " + (usuario.getMotivoRejeicao() != null ? usuario.getMotivoRejeicao() : "Não informado");
+                        break;
+                    case SUSPENSO:
+                        mensagem = "Sua conta está suspensa. Entre em contato com o administrador";
+                        break;
+                    default:
+                        mensagem = "Você não tem permissão para anunciar imóveis";
+                }
+                throw new IllegalStateException(mensagem);
+            }
+        }
     }
 }

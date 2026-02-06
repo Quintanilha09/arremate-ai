@@ -17,6 +17,10 @@ public record UsuarioRequest(
     
     @NotBlank(message = "Senha é obrigatória")
     @Size(min = 6, max = 100, message = "Senha deve ter entre 6 e 100 caracteres")
+    @Pattern(
+        regexp = "^(?=.*[A-Z])(?=.*[!@#$%^&*(),.?\":{}|<>]).{6,}$",
+        message = "Senha deve conter pelo menos uma letra maiúscula e um caractere especial"
+    )
     String senha,
     
     @Pattern(regexp = "\\d{10,11}", message = "Telefone deve conter 10 ou 11 dígitos")
