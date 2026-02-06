@@ -12,12 +12,6 @@
 - **Motivo:** Autenticação via Google (login social)
 - **Localização:** `arremateai/src/main/java/.../OAuth2Service.java`
 
-## 3. Brasil API (Opcional)
-- **URL:** `https://brasilapi.com.br/api/banks/v1`
-- **Motivo:** Buscar nomes reais de bancos para tornar dados MOCKADOS de leilões mais realistas
-- **Localização:** `arremateai/src/main/java/.../LeilaoPublicoClient.java`
-- **Observação:** Se falhar, usa nomes hardcoded. NÃO busca leilões reais.
-
 ---
 
-**Total:** 3 APIs públicas gratuitas, sem necessidade de pagamento.
+**Total:** 2 APIs públicas gratuitas, sem necessidade de pagamento.

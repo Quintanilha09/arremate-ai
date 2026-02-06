@@ -1,6 +1,5 @@
 package com.leilao.arremateai.service;
 
-import com.leilao.arremateai.client.LeilaoPublicoClient;
 import com.leilao.arremateai.domain.Imovel;
 import com.leilao.arremateai.domain.StatusVendedor;
 import com.leilao.arremateai.domain.TipoUsuario;
@@ -30,20 +29,17 @@ import java.util.UUID;
 public class ImovelService {
 
     private static final Logger log = LoggerFactory.getLogger(ImovelService.class);
-    private final LeilaoPublicoClient leilaoClient;
     private final ImovelRepository imovelRepository;
     private final ImagemImovelRepository imagemRepository;
     private final ImovelMapper imovelMapper;
     private final UsuarioRepository usuarioRepository;
 
     public ImovelService(
-        LeilaoPublicoClient leilaoClient,
         ImovelRepository imovelRepository,
         ImagemImovelRepository imagemRepository,
         ImovelMapper imovelMapper,
         UsuarioRepository usuarioRepository
     ) {
-        this.leilaoClient = leilaoClient;
         this.imovelRepository = imovelRepository;
         this.imagemRepository = imagemRepository;
         this.imovelMapper = imovelMapper;
@@ -96,21 +92,12 @@ public class ImovelService {
         Specification<Imovel> apenasAtivos = ImovelSpecifications.apenasAtivos();
         var imoveisBanco = imovelRepository.findAll(apenasAtivos);
 
-        return imoveisBanco.isEmpty()
-            ? buscarImoveisExternos()
-            : converterParaResponses(imoveisBanco);
+        return converterParaResponses(imoveisBanco);
     }
 
     private List<ImovelResponse> converterParaResponses(List<Imovel> imoveis) {
         log.info("Encontrados {} imóveis no banco de dados", imoveis.size());
         return imoveis.stream()
-            .map(imovelMapper::paraResponse)
-            .toList();
-    }
-
-    private List<ImovelResponse> buscarImoveisExternos() {
-        log.info("Nenhum imóvel no banco. Buscando de fontes externas");
-        return leilaoClient.buscarImoveisEmLeilao().stream()
             .map(imovelMapper::paraResponse)
             .toList();
     }

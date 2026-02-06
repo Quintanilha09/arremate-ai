@@ -34,6 +34,8 @@ public class VendedorService {
     private final VendedorMapper vendedorMapper;
     private final DocumentoVendedorMapper documentoMapper;
     private final EmailCorporativoValidator emailCorporativoValidator;
+    private final CnpjValidationService cnpjValidationService;
+    private final AdminNotificationService adminNotificationService;
     // private final EmailService emailService; // TODO: implementar
     // private final ArmazenamentoService armazenamentoService; // TODO: implementar
     
@@ -57,8 +59,9 @@ public class VendedorService {
             throw new IllegalArgumentException("Este email já está em uso");
         }
         
-        // TODO: Validar CNPJ na Receita Federal
-        // validarCnpjReceitaFederal(request.getCnpj());
+        // Validar CNPJ na Receita Federal via ReceitaWS
+        CnpjResponseDTO dadosCnpj = cnpjValidationService.validarCnpj(request.getCnpj());
+        log.info("CNPJ validado: {} - Situação: {}", dadosCnpj.getRazaoSocial(), dadosCnpj.getSituacao());
         
         // Criar usuário vendedor
         log.info("Senha recebida (primeiros 3 chars): {}...", request.getSenha().substring(0, Math.min(3, request.getSenha().length())));
@@ -83,12 +86,15 @@ public class VendedorService {
         vendedor.setInscricaoEstadual(request.getInscricaoEstadual());
         vendedor.setEmailCorporativo(request.getEmailCorporativo());
         vendedor.setEmailCorporativoVerificado(false);
-        vendedor.setStatusVendedor(StatusVendedor.PENDENTE_DOCUMENTOS);
+        vendedor.setStatusVendedor(StatusVendedor.PENDENTE_APROVACAO);
         
         vendedor = usuarioRepository.save(vendedor);
         
         // Registrar no histórico
-        registrarHistorico(vendedor, null, StatusVendedor.PENDENTE_DOCUMENTOS, "Cadastro inicial", null);
+        registrarHistorico(vendedor, null, StatusVendedor.PENDENTE_APROVACAO, "Cadastro inicial - aguardando aprovação do administrador", null);
+        
+        // Notificar administrador sobre novo vendedor
+        adminNotificationService.notificarNovoVendedor(vendedor);
         
         // TODO: Enviar email de verificação
         // emailService.enviarEmailVerificacao(vendedor);

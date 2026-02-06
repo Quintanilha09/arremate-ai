@@ -47,6 +47,16 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
     List<Usuario> findByTipoAndStatusVendedor(TipoUsuario tipo, StatusVendedor status);
     
     /**
+     * Busca vendedores ativos por status
+     */
+    List<Usuario> findByTipoAndStatusVendedorAndAtivoTrue(TipoUsuario tipo, StatusVendedor status);
+    
+    /**
+     * Busca vendedores ativos
+     */
+    List<Usuario> findByTipoAndAtivoTrue(TipoUsuario tipo);
+    
+    /**
      * Busca vendedores pendentes de aprovação (paginado)
      */
     Page<Usuario> findByTipoAndStatusVendedor(TipoUsuario tipo, StatusVendedor status, Pageable pageable);
@@ -55,4 +65,14 @@ public interface UsuarioRepository extends JpaRepository<Usuario, UUID> {
      * Conta vendedores por status
      */
     long countByTipoAndStatusVendedor(TipoUsuario tipo, StatusVendedor status);
+    
+    /**
+     * Conta vendedores ativos
+     */
+    long countByTipoAndAtivoTrue(TipoUsuario tipo);
+    
+    /**
+     * Conta vendedores ativos por status
+     */
+    long countByTipoAndStatusVendedorAndAtivoTrue(TipoUsuario tipo, StatusVendedor status);
 }

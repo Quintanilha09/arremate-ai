@@ -4,8 +4,10 @@ import com.leilao.arremateai.domain.Usuario;
 import com.leilao.arremateai.dto.*;
 import com.leilao.arremateai.security.JwtService;
 import com.leilao.arremateai.service.OAuth2Service;
+import com.leilao.arremateai.service.TrustedDeviceService;
 import com.leilao.arremateai.service.UsuarioService;
 import com.leilao.arremateai.service.VerificacaoService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,19 +33,22 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final VerificacaoService verificacaoService;
     private final OAuth2Service oauth2Service;
+    private final TrustedDeviceService trustedDeviceService;
 
     public AuthController(
             UsuarioService usuarioService,
             JwtService jwtService,
             AuthenticationManager authenticationManager,
             VerificacaoService verificacaoService,
-            OAuth2Service oauth2Service
+            OAuth2Service oauth2Service,
+            TrustedDeviceService trustedDeviceService
     ) {
         this.usuarioService = usuarioService;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
         this.verificacaoService = verificacaoService;
         this.oauth2Service = oauth2Service;
+        this.trustedDeviceService = trustedDeviceService;
     }
 
     @PostMapping("/register")
@@ -65,12 +70,12 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<Map<String, Object>> login(
+            @Valid @RequestBody LoginRequest request,
+            @RequestHeader(value = "X-Device-Token", required = false) String deviceToken) {
+        
         logger.info("Tentativa de login para: {}", request.email());
-        logger.info("Senha recebida - Tamanho: {}, Primeiros 3 chars: {}...", 
-                    request.senha().length(), 
-                    request.senha().substring(0, Math.min(3, request.senha().length())));
-
+        
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.email(),
@@ -79,17 +84,36 @@ public class AuthController {
         );
 
         Usuario usuario = usuarioService.buscarPorEmail(request.email());
-        String token = jwtService.generateToken(usuario);
-        UsuarioResponse usuarioResponse = usuarioService.converterParaResponse(usuario);
-
-        AuthResponse response = new AuthResponse(
-                token,
-                "Bearer",
-                usuarioResponse
-        );
-
-        logger.info("Login realizado com sucesso: {}", usuario.getId());
-        return ResponseEntity.ok(response);
+        
+        // Verificar se dispositivo é confiável
+        boolean deviceTrusted = deviceToken != null && trustedDeviceService.isDeviceTrusted(deviceToken);
+        
+        if (deviceTrusted) {
+            // Skip 2FA - dispositivo confiável
+            String token = jwtService.generateToken(usuario);
+            UsuarioResponse usuarioResponse = usuarioService.converterParaResponse(usuario);
+            
+            logger.info("Login direto (dispositivo confiável) para: {}", usuario.getId());
+            
+            return ResponseEntity.ok(Map.of(
+                    "requiresTwoFactor", false,
+                    "token", token,
+                    "tokenType", "Bearer",
+                    "user", usuarioResponse,
+                    "deviceToken", deviceToken
+            ));
+        } else {
+            // Envia código 2FA
+            verificacaoService.enviarCodigoVerificacao(request.email());
+            
+            logger.info("2FA enviado para: {}", request.email());
+            
+            return ResponseEntity.ok(Map.of(
+                    "requiresTwoFactor", true,
+                    "email", request.email(),
+                    "message", "Código de verificação enviado para seu email"
+            ));
+        }
     }
 
     @GetMapping("/me")
@@ -150,16 +174,37 @@ public class AuthController {
 
     @PostMapping("/2fa/verificar-codigo")
     public ResponseEntity<Map<String, Object>> verificarCodigo(
-            @Valid @RequestBody VerificarCodigoRequest request) {
-        logger.info("Verificando código para: {}", request.email());
+            @Valid @RequestBody VerificarCodigoRequest request,
+            @RequestParam(value = "rememberDevice", defaultValue = "false") boolean rememberDevice,
+            HttpServletRequest httpRequest) {
+        
+        logger.info("Verificando código para: {} (lembrar dispositivo: {})", request.email(), rememberDevice);
         
         boolean valido = verificacaoService.verificarCodigo(request.email(), request.codigo());
         
         if (valido) {
-            return ResponseEntity.ok(Map.of(
+            // Gerar token JWT
+            Usuario usuario = usuarioService.buscarPorEmail(request.email());
+            String token = jwtService.generateToken(usuario);
+            UsuarioResponse usuarioResponse = usuarioService.converterParaResponse(usuario);
+            
+            Map<String, Object> response = Map.of(
                     "valido", true,
-                    "message", "Código verificado com sucesso"
-            ));
+                    "message", "Código verificado com sucesso",
+                    "token", token,
+                    "tokenType", "Bearer",
+                    "user", usuarioResponse
+            );
+            
+            // Se marcou "lembrar dispositivo", gera device token
+            if (rememberDevice) {
+                String deviceToken = trustedDeviceService.trustDevice(usuario, httpRequest);
+                response = new java.util.HashMap<>(response);
+                response.put("deviceToken", deviceToken);
+                logger.info("Device token criado para usuário: {}", usuario.getId());
+            }
+            
+            return ResponseEntity.ok(response);
         } else {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of(

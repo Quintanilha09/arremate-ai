@@ -1,6 +1,5 @@
 package com.leilao.arremateai.mapper;
 
-import com.leilao.arremateai.client.dto.LeilaoExternoDTO;
 import com.leilao.arremateai.domain.ImagemImovel;
 import com.leilao.arremateai.domain.Imovel;
 import com.leilao.arremateai.dto.ImagemResponse;
@@ -64,18 +63,6 @@ public class ImovelMapper {
             .legenda(imagem.getLegenda())
             .principal(imagem.getPrincipal())
             .ordem(imagem.getOrdem())
-            .build();
-    }
-
-    public ImovelResponse paraResponse(LeilaoExternoDTO leilaoExterno) {
-        return ImovelResponse.builder()
-            .numeroLeilao(leilaoExterno.getNumeroLeilao())
-            .descricao(leilaoExterno.getDescricao())
-            .valorAvaliacao(leilaoExterno.getValorAvaliacao())
-            .dataLeilao(leilaoExterno.getDataLeilao())
-            .uf(leilaoExterno.getUf())
-            .instituicao(leilaoExterno.getInstituicao())
-            .linkEdital(leilaoExterno.getLinkEdital())
             .build();
     }
 
